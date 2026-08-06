@@ -1,22 +1,30 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { fetchArchive, storageModeLabel } from '../lib/api'
 import type { ArchiveData } from '../types'
 import { BandCard, NoticeToggle, SectionTitle } from '../components/ui'
 
-export default function HomePage() {
+export default function PublicPage() {
+  const { slug = '' } = useParams()
   const [data, setData] = useState<ArchiveData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
-    fetchArchive()
+    setLoading(true)
+    fetchArchive(slug)
       .then((d) => {
-        if (alive) setData(d)
+        if (alive) {
+          setData(d)
+          setError(null)
+        }
       })
       .catch((e: unknown) => {
-        if (alive) setError(e instanceof Error ? e.message : '불러오기 실패')
+        if (alive) {
+          setData(null)
+          setError(e instanceof Error ? e.message : '불러오기 실패')
+        }
       })
       .finally(() => {
         if (alive) setLoading(false)
@@ -24,7 +32,7 @@ export default function HomePage() {
     return () => {
       alive = false
     }
-  }, [])
+  }, [slug])
 
   if (loading) {
     return (
@@ -38,8 +46,8 @@ export default function HomePage() {
     return (
       <main className="page">
         <p className="error">{error ?? '데이터 없음'}</p>
-        <Link to="/edit" className="text-link">
-          편집으로
+        <Link to="/" className="text-link">
+          허브로 돌아가기
         </Link>
       </main>
     )
@@ -48,6 +56,7 @@ export default function HomePage() {
   const { profile, contacts, bands } = data
   const theCast = bands.filter((b) => b.category === 'the_cast')
   const solar = bands.filter((b) => b.category === 'solar_c')
+  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/p/${data.slug}` : `/p/${data.slug}`
 
   return (
     <main className="page">
@@ -115,10 +124,22 @@ export default function HomePage() {
       </section>
 
       <footer className="footer">
-        <span className="muted">저장: {storageModeLabel()}</span>
-        <Link to="/edit" className="text-link">
-          편집
-        </Link>
+        <div>
+          <p className="muted" style={{ margin: 0 }}>
+            저장: {storageModeLabel()}
+          </p>
+          <p className="muted" style={{ margin: '4px 0 0' }}>
+            공유: {shareUrl}
+          </p>
+        </div>
+        <div className="edit-actions">
+          <Link to={`/p/${data.slug}/edit`} className="text-link">
+            편집
+          </Link>
+          <Link to="/" className="text-link">
+            허브
+          </Link>
+        </div>
       </footer>
     </main>
   )

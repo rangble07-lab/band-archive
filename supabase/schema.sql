@@ -1,18 +1,23 @@
--- Create tables + storage for BAND archive
--- Run in Supabase SQL Editor
+-- BAND Hub (multi-user)
+-- Run in Supabase SQL Editor (can replace older single-tenant schema)
 
-create table if not exists public.profile (
-  id int primary key default 1 check (id = 1),
+create extension if not exists pgcrypto;
+
+create table if not exists public.pages (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null unique,
+  pin_hash text not null,
   display_name text not null default 'ㅇㅇ',
   handle text not null default '@account',
   tagline text not null default '밴드 역계 백업용 페이지입니다.',
   extra_note text not null default '',
   notice text not null default '',
+  created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
 
 create table if not exists public.contacts (
-  id int primary key default 1 check (id = 1),
+  page_id uuid primary key references public.pages(id) on delete cascade,
   main text not null default '',
   sub text not null default '',
   other text not null default '',
@@ -21,6 +26,7 @@ create table if not exists public.contacts (
 
 create table if not exists public.bands (
   id uuid primary key default gen_random_uuid(),
+  page_id uuid not null references public.pages(id) on delete cascade,
   category text not null check (category in ('the_cast', 'solar_c')),
   band_name text not null default '',
   face_name text not null default '',
@@ -31,20 +37,18 @@ create table if not exists public.bands (
   created_at timestamptz default now()
 );
 
-insert into public.profile (id) values (1) on conflict (id) do nothing;
-insert into public.contacts (id) values (1) on conflict (id) do nothing;
+create index if not exists bands_page_id_idx on public.bands(page_id);
+create index if not exists pages_slug_idx on public.pages(slug);
 
-alter table public.profile enable row level security;
+alter table public.pages enable row level security;
 alter table public.contacts enable row level security;
 alter table public.bands enable row level security;
 
--- Personal archive MVP: public read + anon write (PIN only gates the UI).
--- Do not put sensitive secrets in this project beyond the edit PIN.
-
-drop policy if exists "profile read" on public.profile;
-drop policy if exists "profile write" on public.profile;
-create policy "profile read" on public.profile for select using (true);
-create policy "profile write" on public.profile for all using (true) with check (true);
+-- Personal hub MVP: public read/write (PIN only gates the edit UI).
+drop policy if exists "pages read" on public.pages;
+drop policy if exists "pages write" on public.pages;
+create policy "pages read" on public.pages for select using (true);
+create policy "pages write" on public.pages for all using (true) with check (true);
 
 drop policy if exists "contacts read" on public.contacts;
 drop policy if exists "contacts write" on public.contacts;

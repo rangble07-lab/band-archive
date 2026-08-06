@@ -1,58 +1,61 @@
 import { supabase, isSupabaseConfigured } from './supabase'
+import { hashPin } from './auth'
 import type { ArchiveData, Band, BandCategory, Contacts, Profile } from '../types'
-import { EMPTY_CONTACTS, EMPTY_PROFILE } from '../types'
+import { EMPTY_CONTACTS, EMPTY_PROFILE, isValidSlug, normalizeSlug } from '../types'
 
-const LOCAL_KEY = 'band-archive-data'
+const LOCAL_KEY = 'band-hub-pages-v1'
+
+type LocalStore = Record<
+  string,
+  {
+    pageId: string
+    pinHash: string
+    profile: Profile
+    contacts: Contacts
+    bands: Band[]
+  }
+>
 
 function uid(): string {
   return crypto.randomUUID()
 }
 
-function defaultData(): ArchiveData {
-  return {
-    profile: { ...EMPTY_PROFILE },
-    contacts: { ...EMPTY_CONTACTS },
-    bands: [
-      {
-        id: uid(),
-        category: 'the_cast',
-        band_name: '',
-        face_name: '',
-        handle: '',
-        cover_url: null,
-        face_url: null,
-        sort_order: 0,
-      },
-      {
-        id: uid(),
-        category: 'solar_c',
-        band_name: '',
-        face_name: '',
-        handle: '',
-        cover_url: null,
-        face_url: null,
-        sort_order: 0,
-      },
-    ],
-  }
+function emptyBands(): Band[] {
+  return [
+    {
+      id: uid(),
+      category: 'the_cast',
+      band_name: '',
+      face_name: '',
+      handle: '',
+      cover_url: null,
+      face_url: null,
+      sort_order: 0,
+    },
+    {
+      id: uid(),
+      category: 'solar_c',
+      band_name: '',
+      face_name: '',
+      handle: '',
+      cover_url: null,
+      face_url: null,
+      sort_order: 0,
+    },
+  ]
 }
 
-function loadLocal(): ArchiveData {
+function loadStore(): LocalStore {
   try {
     const raw = localStorage.getItem(LOCAL_KEY)
-    if (!raw) {
-      const data = defaultData()
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(data))
-      return data
-    }
-    return JSON.parse(raw) as ArchiveData
+    return raw ? (JSON.parse(raw) as LocalStore) : {}
   } catch {
-    return defaultData()
+    return {}
   }
 }
 
-function saveLocal(data: ArchiveData): void {
-  localStorage.setItem(LOCAL_KEY, JSON.stringify(data))
+function saveStore(store: LocalStore): void {
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(store))
 }
 
 function publicUrl(path: string | null): string | null {
@@ -60,85 +63,6 @@ function publicUrl(path: string | null): string | null {
   if (path.startsWith('http') || path.startsWith('data:')) return path
   const { data } = supabase.storage.from('band-images').getPublicUrl(path)
   return data.publicUrl
-}
-
-export async function fetchArchive(): Promise<ArchiveData> {
-  if (!isSupabaseConfigured || !supabase) {
-    return loadLocal()
-  }
-
-  const [profileRes, contactsRes, bandsRes] = await Promise.all([
-    supabase.from('profile').select('*').eq('id', 1).maybeSingle(),
-    supabase.from('contacts').select('*').eq('id', 1).maybeSingle(),
-    supabase.from('bands').select('*').order('sort_order', { ascending: true }),
-  ])
-
-  if (profileRes.error) throw profileRes.error
-  if (contactsRes.error) throw contactsRes.error
-  if (bandsRes.error) throw bandsRes.error
-
-  const profile: Profile = profileRes.data
-    ? {
-        display_name: profileRes.data.display_name ?? EMPTY_PROFILE.display_name,
-        handle: profileRes.data.handle ?? EMPTY_PROFILE.handle,
-        tagline: profileRes.data.tagline ?? EMPTY_PROFILE.tagline,
-        extra_note: profileRes.data.extra_note ?? EMPTY_PROFILE.extra_note,
-        notice: profileRes.data.notice ?? EMPTY_PROFILE.notice,
-      }
-    : { ...EMPTY_PROFILE }
-
-  const contacts: Contacts = contactsRes.data
-    ? {
-        main: contactsRes.data.main ?? EMPTY_CONTACTS.main,
-        sub: contactsRes.data.sub ?? EMPTY_CONTACTS.sub,
-        other: contactsRes.data.other ?? EMPTY_CONTACTS.other,
-      }
-    : { ...EMPTY_CONTACTS }
-
-  const bands: Band[] = (bandsRes.data ?? []).map((row) => ({
-    id: row.id,
-    category: row.category as BandCategory,
-    band_name: row.band_name ?? '',
-    face_name: row.face_name ?? '',
-    handle: row.handle ?? '',
-    cover_url: publicUrl(row.cover_path),
-    face_url: publicUrl(row.face_path),
-    sort_order: row.sort_order ?? 0,
-  }))
-
-  return { profile, contacts, bands }
-}
-
-export async function saveProfile(profile: Profile): Promise<void> {
-  if (!isSupabaseConfigured || !supabase) {
-    const data = loadLocal()
-    data.profile = profile
-    saveLocal(data)
-    return
-  }
-
-  const { error } = await supabase.from('profile').upsert({
-    id: 1,
-    ...profile,
-    updated_at: new Date().toISOString(),
-  })
-  if (error) throw error
-}
-
-export async function saveContacts(contacts: Contacts): Promise<void> {
-  if (!isSupabaseConfigured || !supabase) {
-    const data = loadLocal()
-    data.contacts = contacts
-    saveLocal(data)
-    return
-  }
-
-  const { error } = await supabase.from('contacts').upsert({
-    id: 1,
-    ...contacts,
-    updated_at: new Date().toISOString(),
-  })
-  if (error) throw error
 }
 
 function pathFromPublicUrl(url: string | null): string | null {
@@ -150,13 +74,197 @@ function pathFromPublicUrl(url: string | null): string | null {
   return null
 }
 
-export async function upsertBand(band: Band): Promise<Band> {
+export function storageModeLabel(): string {
+  return isSupabaseConfigured ? 'Supabase 허브' : '이 기기 (localStorage 허브)'
+}
+
+export async function pageExists(slugInput: string): Promise<boolean> {
+  const slug = normalizeSlug(slugInput)
+  if (!slug) return false
+
   if (!isSupabaseConfigured || !supabase) {
-    const data = loadLocal()
-    const idx = data.bands.findIndex((b) => b.id === band.id)
-    if (idx >= 0) data.bands[idx] = band
-    else data.bands.push(band)
-    saveLocal(data)
+    return Boolean(loadStore()[slug])
+  }
+
+  const { data, error } = await supabase.from('pages').select('id').eq('slug', slug).maybeSingle()
+  if (error) throw error
+  return Boolean(data)
+}
+
+export async function createPage(slugInput: string, pin: string): Promise<string> {
+  const slug = normalizeSlug(slugInput)
+  if (!isValidSlug(slug)) {
+    throw new Error('주소는 영문/숫자/하이픈 2~32자로 만들어 주세요.')
+  }
+  if (!pin || pin.length < 4) {
+    throw new Error('PIN은 4자 이상으로 설정해 주세요.')
+  }
+  if (await pageExists(slug)) {
+    throw new Error('이미 있는 주소입니다. 다른 이름을 골라 주세요.')
+  }
+
+  const pinHash = await hashPin(slug, pin)
+  const pageId = uid()
+
+  if (!isSupabaseConfigured || !supabase) {
+    const store = loadStore()
+    store[slug] = {
+      pageId,
+      pinHash,
+      profile: { ...EMPTY_PROFILE },
+      contacts: { ...EMPTY_CONTACTS },
+      bands: emptyBands(),
+    }
+    saveStore(store)
+    return slug
+  }
+
+  const { error: pageError } = await supabase.from('pages').insert({
+    id: pageId,
+    slug,
+    pin_hash: pinHash,
+    ...EMPTY_PROFILE,
+  })
+  if (pageError) throw pageError
+
+  const { error: contactsError } = await supabase.from('contacts').insert({
+    page_id: pageId,
+    ...EMPTY_CONTACTS,
+  })
+  if (contactsError) throw contactsError
+
+  const starter = emptyBands().map((b, i) => ({
+    id: b.id,
+    page_id: pageId,
+    category: b.category,
+    band_name: '',
+    face_name: '',
+    handle: '',
+    cover_path: null,
+    face_path: null,
+    sort_order: i,
+  }))
+  const { error: bandsError } = await supabase.from('bands').insert(starter)
+  if (bandsError) throw bandsError
+
+  return slug
+}
+
+export async function verifyPagePin(slugInput: string, pin: string): Promise<boolean> {
+  const slug = normalizeSlug(slugInput)
+  const pinHash = await hashPin(slug, pin)
+
+  if (!isSupabaseConfigured || !supabase) {
+    const page = loadStore()[slug]
+    return Boolean(page && page.pinHash === pinHash)
+  }
+
+  const { data, error } = await supabase.from('pages').select('pin_hash').eq('slug', slug).maybeSingle()
+  if (error) throw error
+  return Boolean(data && data.pin_hash === pinHash)
+}
+
+export async function fetchArchive(slugInput: string): Promise<ArchiveData> {
+  const slug = normalizeSlug(slugInput)
+
+  if (!isSupabaseConfigured || !supabase) {
+    const page = loadStore()[slug]
+    if (!page) throw new Error('페이지를 찾을 수 없습니다.')
+    return {
+      pageId: page.pageId,
+      slug,
+      profile: page.profile,
+      contacts: page.contacts,
+      bands: page.bands,
+    }
+  }
+
+  const { data: page, error: pageError } = await supabase
+    .from('pages')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle()
+  if (pageError) throw pageError
+  if (!page) throw new Error('페이지를 찾을 수 없습니다.')
+
+  const [contactsRes, bandsRes] = await Promise.all([
+    supabase.from('contacts').select('*').eq('page_id', page.id).maybeSingle(),
+    supabase.from('bands').select('*').eq('page_id', page.id).order('sort_order', { ascending: true }),
+  ])
+  if (contactsRes.error) throw contactsRes.error
+  if (bandsRes.error) throw bandsRes.error
+
+  return {
+    pageId: page.id,
+    slug,
+    profile: {
+      display_name: page.display_name ?? EMPTY_PROFILE.display_name,
+      handle: page.handle ?? EMPTY_PROFILE.handle,
+      tagline: page.tagline ?? EMPTY_PROFILE.tagline,
+      extra_note: page.extra_note ?? EMPTY_PROFILE.extra_note,
+      notice: page.notice ?? EMPTY_PROFILE.notice,
+    },
+    contacts: contactsRes.data
+      ? {
+          main: contactsRes.data.main ?? '',
+          sub: contactsRes.data.sub ?? '',
+          other: contactsRes.data.other ?? '',
+        }
+      : { ...EMPTY_CONTACTS },
+    bands: (bandsRes.data ?? []).map((row) => ({
+      id: row.id,
+      category: row.category as BandCategory,
+      band_name: row.band_name ?? '',
+      face_name: row.face_name ?? '',
+      handle: row.handle ?? '',
+      cover_url: publicUrl(row.cover_path),
+      face_url: publicUrl(row.face_path),
+      sort_order: row.sort_order ?? 0,
+    })),
+  }
+}
+
+export async function saveProfile(slug: string, pageId: string, profile: Profile): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) {
+    const store = loadStore()
+    if (!store[slug]) throw new Error('페이지 없음')
+    store[slug].profile = profile
+    saveStore(store)
+    return
+  }
+
+  const { error } = await supabase
+    .from('pages')
+    .update({ ...profile, updated_at: new Date().toISOString() })
+    .eq('id', pageId)
+  if (error) throw error
+}
+
+export async function saveContacts(slug: string, pageId: string, contacts: Contacts): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) {
+    const store = loadStore()
+    if (!store[slug]) throw new Error('페이지 없음')
+    store[slug].contacts = contacts
+    saveStore(store)
+    return
+  }
+
+  const { error } = await supabase.from('contacts').upsert({
+    page_id: pageId,
+    ...contacts,
+    updated_at: new Date().toISOString(),
+  })
+  if (error) throw error
+}
+
+export async function upsertBand(slug: string, pageId: string, band: Band): Promise<Band> {
+  if (!isSupabaseConfigured || !supabase) {
+    const store = loadStore()
+    if (!store[slug]) throw new Error('페이지 없음')
+    const idx = store[slug].bands.findIndex((b) => b.id === band.id)
+    if (idx >= 0) store[slug].bands[idx] = band
+    else store[slug].bands.push(band)
+    saveStore(store)
     return band
   }
 
@@ -177,6 +285,7 @@ export async function upsertBand(band: Band): Promise<Band> {
 
   const row = {
     id: band.id,
+    page_id: pageId,
     category: band.category,
     band_name: band.band_name,
     face_name: band.face_name,
@@ -195,11 +304,12 @@ export async function upsertBand(band: Band): Promise<Band> {
   }
 }
 
-export async function deleteBand(id: string): Promise<void> {
+export async function deleteBand(slug: string, id: string): Promise<void> {
   if (!isSupabaseConfigured || !supabase) {
-    const data = loadLocal()
-    data.bands = data.bands.filter((b) => b.id !== id)
-    saveLocal(data)
+    const store = loadStore()
+    if (!store[slug]) return
+    store[slug].bands = store[slug].bands.filter((b) => b.id !== id)
+    saveStore(store)
     return
   }
 
@@ -207,8 +317,12 @@ export async function deleteBand(id: string): Promise<void> {
   if (error) throw error
 }
 
-export async function createBand(category: BandCategory): Promise<Band> {
-  const data = await fetchArchive()
+export async function createBand(
+  slug: string,
+  pageId: string,
+  category: BandCategory,
+): Promise<Band> {
+  const data = await fetchArchive(slug)
   const same = data.bands.filter((b) => b.category === category)
   const band: Band = {
     id: uid(),
@@ -220,7 +334,7 @@ export async function createBand(category: BandCategory): Promise<Band> {
     face_url: null,
     sort_order: same.length,
   }
-  return upsertBand(band)
+  return upsertBand(slug, pageId, band)
 }
 
 async function fileToDataUrl(file: File): Promise<string> {
@@ -233,16 +347,25 @@ async function fileToDataUrl(file: File): Promise<string> {
 }
 
 export async function uploadBandImage(
+  slug: string,
+  pageId: string,
   bandId: string,
   kind: 'cover' | 'face',
   file: File,
 ): Promise<string> {
   if (!isSupabaseConfigured || !supabase) {
-    return fileToDataUrl(file)
+    const url = await fileToDataUrl(file)
+    const store = loadStore()
+    const band = store[slug]?.bands.find((b) => b.id === bandId)
+    if (!band) throw new Error('밴드 없음')
+    if (kind === 'cover') band.cover_url = url
+    else band.face_url = url
+    saveStore(store)
+    return url
   }
 
   const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-  const path = `${kind}s/${bandId}-${Date.now()}.${ext}`
+  const path = `${pageId}/${kind}s/${bandId}-${Date.now()}.${ext}`
 
   const { error } = await supabase.storage.from('band-images').upload(path, file, {
     upsert: true,
@@ -260,22 +383,22 @@ export async function uploadBandImage(
   return publicUrl(path)!
 }
 
-export async function clearBandImage(bandId: string, kind: 'cover' | 'face'): Promise<void> {
+export async function clearBandImage(
+  slug: string,
+  bandId: string,
+  kind: 'cover' | 'face',
+): Promise<void> {
   if (!isSupabaseConfigured || !supabase) {
-    const data = loadLocal()
-    const band = data.bands.find((b) => b.id === bandId)
+    const store = loadStore()
+    const band = store[slug]?.bands.find((b) => b.id === bandId)
     if (!band) return
     if (kind === 'cover') band.cover_url = null
     else band.face_url = null
-    saveLocal(data)
+    saveStore(store)
     return
   }
 
   const column = kind === 'cover' ? 'cover_path' : 'face_path'
   const { error } = await supabase.from('bands').update({ [column]: null }).eq('id', bandId)
   if (error) throw error
-}
-
-export function storageModeLabel(): string {
-  return isSupabaseConfigured ? 'Supabase' : '이 기기 (localStorage)'
 }

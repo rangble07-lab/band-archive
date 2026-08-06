@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { isEditUnlocked, lockEdit, unlockEdit } from '../lib/auth'
 import {
   clearBandImage,
@@ -11,12 +11,15 @@ import {
   storageModeLabel,
   uploadBandImage,
   upsertBand,
+  verifyPagePin,
 } from '../lib/api'
 import type { ArchiveData, Band, BandCategory, Contacts, Profile } from '../types'
 import { SectionTitle } from '../components/ui'
+import { isSupabaseConfigured } from '../lib/supabase'
 
 export default function EditPage() {
-  const [authed, setAuthed] = useState(isEditUnlocked)
+  const { slug = '' } = useParams()
+  const [authed, setAuthed] = useState(() => isEditUnlocked(slug))
   const [pin, setPin] = useState('')
   const [pinError, setPinError] = useState<string | null>(null)
   const [data, setData] = useState<ArchiveData | null>(null)
@@ -24,9 +27,13 @@ export default function EditPage() {
   const [busy, setBusy] = useState(false)
 
   const reload = useCallback(async () => {
-    const d = await fetchArchive()
+    const d = await fetchArchive(slug)
     setData(d)
-  }, [])
+  }, [slug])
+
+  useEffect(() => {
+    setAuthed(isEditUnlocked(slug))
+  }, [slug])
 
   useEffect(() => {
     if (!authed) return
@@ -35,19 +42,28 @@ export default function EditPage() {
     })
   }, [authed, reload])
 
-  function onUnlock(e: FormEvent) {
+  async function onUnlock(e: FormEvent) {
     e.preventDefault()
-    if (unlockEdit(pin)) {
+    setBusy(true)
+    setPinError(null)
+    try {
+      const ok = await verifyPagePin(slug, pin)
+      if (!ok) {
+        setPinError('PIN이 올바르지 않습니다')
+        return
+      }
+      unlockEdit(slug)
       setAuthed(true)
-      setPinError(null)
       setPin('')
-    } else {
-      setPinError('PIN이 올바르지 않습니다')
+    } catch (err: unknown) {
+      setPinError(err instanceof Error ? err.message : '확인 실패')
+    } finally {
+      setBusy(false)
     }
   }
 
   function onLock() {
-    lockEdit()
+    lockEdit(slug)
     setAuthed(false)
   }
 
@@ -68,27 +84,31 @@ export default function EditPage() {
   if (!authed) {
     return (
       <main className="page edit-page">
-        <h1>편집</h1>
-        <p className="muted">본인만 사용할 수 있습니다.</p>
+        <h1>편집 · {slug}</h1>
+        <p className="muted">이 페이지 주인만 PIN으로 들어올 수 있습니다.</p>
         <form className="pin-form" onSubmit={onUnlock}>
           <label htmlFor="pin">PIN</label>
           <input
             id="pin"
             type="password"
-            inputMode="numeric"
             autoComplete="current-password"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
             placeholder="PIN 입력"
           />
           {pinError ? <p className="error">{pinError}</p> : null}
-          <button type="submit" className="btn primary">
+          <button type="submit" className="btn primary" disabled={busy}>
             잠금 해제
           </button>
         </form>
-        <Link to="/" className="text-link">
-          공개 페이지로
-        </Link>
+        <div className="edit-actions">
+          <Link to={`/p/${slug}`} className="text-link">
+            공개 페이지
+          </Link>
+          <Link to="/" className="text-link">
+            허브
+          </Link>
+        </div>
       </main>
     )
   }
@@ -105,11 +125,11 @@ export default function EditPage() {
     <main className="page edit-page">
       <header className="edit-top">
         <div>
-          <h1>편집</h1>
+          <h1>편집 · {slug}</h1>
           <p className="muted">저장: {storageModeLabel()}</p>
         </div>
         <div className="edit-actions">
-          <Link to="/" className="btn ghost">
+          <Link to={`/p/${slug}`} className="btn ghost">
             미리보기
           </Link>
           <button type="button" className="btn ghost" onClick={onLock}>
@@ -123,18 +143,24 @@ export default function EditPage() {
       <ProfileEditor
         profile={data.profile}
         busy={busy}
-        onSave={(profile) => withBusy(() => saveProfile(profile), '프로필 저장됨')}
+        onSave={(profile) =>
+          withBusy(() => saveProfile(slug, data.pageId, profile), '프로필 저장됨')
+        }
       />
 
       <ContactsEditor
         contacts={data.contacts}
         busy={busy}
-        onSave={(contacts) => withBusy(() => saveContacts(contacts), '연락처 저장됨')}
+        onSave={(contacts) =>
+          withBusy(() => saveContacts(slug, data.pageId, contacts), '연락처 저장됨')
+        }
       />
 
       <BandSection
         title="더 캐스트 기반"
         category="the_cast"
+        slug={slug}
+        pageId={data.pageId}
         bands={data.bands.filter((b) => b.category === 'the_cast')}
         busy={busy}
         onChange={withBusy}
@@ -143,6 +169,8 @@ export default function EditPage() {
       <BandSection
         title="솔라 씨 기반"
         category="solar_c"
+        slug={slug}
+        pageId={data.pageId}
         bands={data.bands.filter((b) => b.category === 'solar_c')}
         busy={busy}
         onChange={withBusy}
@@ -245,12 +273,16 @@ function ContactsEditor({
 function BandSection({
   title,
   category,
+  slug,
+  pageId,
   bands,
   busy,
   onChange,
 }: {
   title: string
   category: BandCategory
+  slug: string
+  pageId: string
   bands: Band[]
   busy: boolean
   onChange: (fn: () => Promise<void>, msg: string) => Promise<void>
@@ -263,23 +295,36 @@ function BandSection({
           type="button"
           className="btn ghost"
           disabled={busy}
-          onClick={() => onChange(() => createBand(category).then(() => undefined), '밴드 추가됨')}
+          onClick={() =>
+            onChange(() => createBand(slug, pageId, category).then(() => undefined), '밴드 추가됨')
+          }
         >
           + 추가
         </button>
       </div>
       {bands.map((band) => (
-        <BandEditor key={band.id} band={band} busy={busy} onChange={onChange} />
+        <BandEditor
+          key={band.id}
+          slug={slug}
+          pageId={pageId}
+          band={band}
+          busy={busy}
+          onChange={onChange}
+        />
       ))}
     </section>
   )
 }
 
 function BandEditor({
+  slug,
+  pageId,
   band,
   busy,
   onChange,
 }: {
+  slug: string
+  pageId: string
   band: Band
   busy: boolean
   onChange: (fn: () => Promise<void>, msg: string) => Promise<void>
@@ -290,15 +335,15 @@ function BandEditor({
   async function onFile(kind: 'cover' | 'face', file: File | null) {
     if (!file) return
     await onChange(async () => {
-      const url = await uploadBandImage(band.id, kind, file)
+      const url = await uploadBandImage(slug, pageId, band.id, kind, file)
       const next = {
         ...form,
         cover_url: kind === 'cover' ? url : form.cover_url,
         face_url: kind === 'face' ? url : form.face_url,
       }
       setForm(next)
-      if (!import.meta.env.VITE_SUPABASE_URL) {
-        await upsertBand(next)
+      if (!isSupabaseConfigured) {
+        await upsertBand(slug, pageId, next)
       }
     }, `${kind === 'cover' ? '커버' : '낯'} 사진 업로드됨`)
   }
@@ -332,10 +377,10 @@ function BandEditor({
           onPick={(f) => onFile('cover', f)}
           onClear={() =>
             onChange(async () => {
-              await clearBandImage(band.id, 'cover')
+              await clearBandImage(slug, band.id, 'cover')
               const next = { ...form, cover_url: null }
               setForm(next)
-              if (!import.meta.env.VITE_SUPABASE_URL) await upsertBand(next)
+              if (!isSupabaseConfigured) await upsertBand(slug, pageId, next)
             }, '커버 삭제됨')
           }
         />
@@ -346,10 +391,10 @@ function BandEditor({
           onPick={(f) => onFile('face', f)}
           onClear={() =>
             onChange(async () => {
-              await clearBandImage(band.id, 'face')
+              await clearBandImage(slug, band.id, 'face')
               const next = { ...form, face_url: null }
               setForm(next)
-              if (!import.meta.env.VITE_SUPABASE_URL) await upsertBand(next)
+              if (!isSupabaseConfigured) await upsertBand(slug, pageId, next)
             }, '낯 사진 삭제됨')
           }
         />
@@ -360,7 +405,9 @@ function BandEditor({
           type="button"
           className="btn primary"
           disabled={busy}
-          onClick={() => onChange(() => upsertBand(form).then(() => undefined), '밴드 저장됨')}
+          onClick={() =>
+            onChange(() => upsertBand(slug, pageId, form).then(() => undefined), '밴드 저장됨')
+          }
         >
           이 밴드 저장
         </button>
@@ -370,7 +417,7 @@ function BandEditor({
           disabled={busy}
           onClick={() => {
             if (confirm('이 밴드를 삭제할까요?')) {
-              void onChange(() => deleteBand(band.id), '삭제됨')
+              void onChange(() => deleteBand(slug, band.id), '삭제됨')
             }
           }}
         >

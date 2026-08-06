@@ -26,6 +26,8 @@ export interface Band {
 }
 
 export interface ArchiveData {
+  pageId: string
+  slug: string
   profile: Profile
   contacts: Contacts
   bands: Band[]
@@ -43,4 +45,19 @@ export const EMPTY_CONTACTS: Contacts = {
   main: '@_____',
   sub: '@_____',
   other: '_____',
+}
+
+export function normalizeSlug(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-_]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 32)
+}
+
+export function isValidSlug(slug: string): boolean {
+  return /^[a-z0-9][a-z0-9_-]{1,31}$/.test(slug)
 }

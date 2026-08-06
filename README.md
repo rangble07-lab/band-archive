@@ -1,74 +1,77 @@
-# BAND Archive (Template)
+# BAND Hub
 
-다녀온 메신저 밴드를 **공개 링크로 보여주는** 미니 웹앱 템플릿입니다.  
-구글 시트 **사본 만들기**처럼, 이 저장소를 복사한 뒤 **자기 Supabase + 자기 Vercel**로 배포하면 됩니다.
+**사이트 하나**에서 여러 사람이 각자 밴드 페이지를 만드는 허브입니다.  
+(사본 배포 / Use this template 불필요)
 
-| 페이지 | 주소 | 용도 |
-|--------|------|------|
-| 공개 | `/` | 남에게 보여줄 페이지 |
-| 편집 | `/edit` | 본인만 PIN으로 수정 (모바일 가능) |
+| 주소 | 용도 |
+|------|------|
+| `/` | 허브 — 페이지 만들기 / 열기 |
+| `/p/내주소` | 공개 페이지 (남에게 이 링크) |
+| `/p/내주소/edit` | 본인만 PIN으로 편집 |
+
+BandBackup처럼 **방문자는 가입·배포 없이** 허브에 들어와 페이지만 만들면 됩니다.  
+운영자(당신)만 Supabase + Vercel을 **한 번** 연결하면 됩니다.
 
 ---
 
-## 다른 사람이 쓰는 방법 (사본)
+## 사용자 흐름 (쉬움)
 
-### A. GitHub 템플릿으로 복사 (권장)
+1. 허브 주소 접속  
+2. **내 페이지 만들기** → 주소(`cozy`) + PIN  
+3. 밴드·사진 편집  
+4. 남에게 `https://허브주소/p/cozy` 만 공유  
 
-1. 이 저장소 상단 **Use this template** → **Create a new repository**
-2. [Supabase](https://supabase.com) 무료 프로젝트 생성
-3. SQL Editor에서 [`supabase/schema.sql`](supabase/schema.sql) **전체 실행**
-4. Settings → API 에서 **Project URL** / **anon public** 키 복사
-5. 아래 **Deploy** 버튼으로 Vercel 배포 (또는 Vercel에서 Import)
+---
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/rangble07-lab/band-archive&env=VITE_EDIT_PIN,VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY&envDescription=PIN%20and%20Supabase%20keys%20for%20your%20own%20BAND%20page&envLink=https://github.com/rangble07-lab/band-archive&project-name=band-archive&repository-name=band-archive)
+## 운영자: 배포 (한 번만)
 
-배포 시 환경 변수:
+### 1) Supabase
 
-| 변수 | 설명 |
-|------|------|
-| `VITE_EDIT_PIN` | 편집용 PIN (본인만 아는 값) |
-| `VITE_SUPABASE_URL` | `https://xxxx.supabase.co` |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
+1. [Supabase](https://supabase.com) 무료 프로젝트 생성  
+2. SQL Editor에서 [`supabase/schema.sql`](supabase/schema.sql) **전체 실행**  
+3. Settings → API 에서 URL / anon key 복사  
 
-6. 배포 후
-   - 공개: `https://your-app.vercel.app`
-   - 편집: `https://your-app.vercel.app/edit`
+> 예전에 단일 페이지용 테이블을 썼다면, 허브용 `schema.sql`이 `pages` 기준입니다.  
+> 충돌 시 새 프로젝트를 쓰거나 옛 `profile` 테이블을 정리하세요.
 
-데이터·사진·PIN은 **사람마다 완전히 분리**됩니다.
+### 2) 환경 변수
 
-### B. 로컬에서 먼저 시험
+```env
+VITE_SUPABASE_URL=https://xxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+```
+
+PIN은 사람마다 페이지 만들 때 정합니다. (`VITE_EDIT_PIN` 없음)
+
+### 3) Vercel
+
+1. 이 repo를 Vercel에 Import  
+2. 위 환경 변수 2개 추가  
+3. Deploy  
+4. 나온 주소를 허브 링크로 공유  
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/rangble07-lab/band-archive&env=VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY&envDescription=Supabase%20keys%20for%20BAND%20Hub&project-name=band-archive&repository-name=band-archive)
+
+---
+
+## 로컬 시험 (Supabase 없이)
 
 ```bash
 npm install
-cp .env.example .env.local
-# VITE_EDIT_PIN 수정
 npm run dev
 ```
 
-- 공개: http://localhost:5173  
-- 편집: http://localhost:5173/edit  
-
-Supabase 키 없이 쓰면 **이 기기 localStorage**에만 저장됩니다.  
-남과 같은 내용을 공유하려면 Supabase + Vercel이 필요합니다.
-
----
-
-## 화면 구성
-
-| 구역 | 내용 |
-|------|------|
-| 헤더 | BAND, 이름(@핸들) 연공계, 소개 |
-| 처음이라면 | 접기 공지 |
-| 밴드 목록 | 더 캐스트 / 솔라 씨 · 밴드명·낯·@ · 커버\|낯 |
-| 기타 연락처 | Main / Sub / 기타 |
+- http://localhost:5173 → 허브  
+- 페이지는 **이 브라우저 localStorage**에만 저장 (남과 공유 불가)  
+- 공유하려면 Supabase 연결 필수  
 
 ---
 
 ## 보안 (개인용 MVP)
 
-- PIN은 **편집 화면**만 막습니다.
-- `schema.sql`은 개인 아카이브용으로 anon read/write를 허용합니다.
-- **service_role 키는 넣지 마세요.** PIN·anon key는 커밋하지 마세요.
+- PIN은 해시로 저장되고, **편집 UI**를 막습니다.  
+- DB는 허브 MVP로 anon read/write를 허용합니다.  
+- service_role 키는 넣지 마세요.  
 
 ---
 
@@ -79,9 +82,3 @@ npm run dev
 npm run build
 npm run preview
 ```
-
----
-
-## 템플릿 운영자 안내
-
-저장소를 Template으로 공개하는 방법은 [`docs/PUBLISH_AS_TEMPLATE.md`](docs/PUBLISH_AS_TEMPLATE.md) 를 보세요.

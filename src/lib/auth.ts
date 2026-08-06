@@ -1,21 +1,19 @@
-const FLAG = 'band-archive-edit-ok'
+const flag = (slug: string) => `band-hub-edit:${slug}`
 
-export function getConfiguredPin(): string {
-  return (import.meta.env.VITE_EDIT_PIN as string | undefined)?.trim() || '1234'
+export function isEditUnlocked(slug: string): boolean {
+  return sessionStorage.getItem(flag(slug)) === '1'
 }
 
-export function isEditUnlocked(): boolean {
-  return sessionStorage.getItem(FLAG) === '1'
+export function unlockEdit(slug: string): void {
+  sessionStorage.setItem(flag(slug), '1')
 }
 
-export function unlockEdit(pin: string): boolean {
-  if (pin === getConfiguredPin()) {
-    sessionStorage.setItem(FLAG, '1')
-    return true
-  }
-  return false
+export function lockEdit(slug: string): void {
+  sessionStorage.removeItem(flag(slug))
 }
 
-export function lockEdit(): void {
-  sessionStorage.removeItem(FLAG)
+export async function hashPin(slug: string, pin: string): Promise<string> {
+  const data = new TextEncoder().encode(`${slug}:${pin}`)
+  const buf = await crypto.subtle.digest('SHA-256', data)
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }

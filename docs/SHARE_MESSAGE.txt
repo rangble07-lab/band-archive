@@ -1,23 +1,16 @@
-BAND 페이지 템플릿 (사본 만들기)
+BAND Hub (간편 버전)
 
-1) 아래 주소에서 Use this template 누르기
-https://github.com/rangble07-lab/band-archive
+1) 이 주소 접속
+https://여기-배포주소.vercel.app
 
-2) Supabase 무료 가입 → 새 프로젝트 만들기
-→ SQL Editor에 이 파일 내용 전부 붙여넣고 Run
-https://github.com/rangble07-lab/band-archive/blob/main/supabase/schema.sql
+2) 「내 페이지 만들기」
+- 주소 예: myname
+- PIN 예: 나만아는비번
 
-3) README의 Deploy with Vercel 버튼 클릭
-(또는 vercel.com에서 방금 만든 GitHub repo Import)
+3) 밴드명 / 낯 / 사진 넣고 저장
 
-4) 환경변수 3개 입력
-VITE_EDIT_PIN = 나만의 비밀번호
-VITE_SUPABASE_URL = Supabase Project URL
-VITE_SUPABASE_ANON_KEY = anon public 키
+4) 남에게 이 링크만 주기
+https://여기-배포주소.vercel.app/p/myname
 
-5) 배포 끝나면
-공개(남에게 줄 링크): https://프로젝트명.vercel.app
-편집(본인만): https://프로젝트명.vercel.app/edit
-→ /edit 에서 PIN 입력 후 밴드·사진 수정
-
-※ Use this template 버튼이 안 보이면, 저장소 주인이 Settings → Template repository 를 켠 뒤예요.
+편집은 /p/myname/edit + PIN
+(GitHub 사본·Supabase 개인 계정 필요 없음)
