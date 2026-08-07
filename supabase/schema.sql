@@ -3,7 +3,7 @@
 
 create extension if not exists pgcrypto;
 
-create table if not exists public.pages (
+  create table if not exists public.pages (
   id uuid primary key default gen_random_uuid(),
   slug text not null unique,
   pin_hash text not null,
@@ -12,6 +12,9 @@ create table if not exists public.pages (
   tagline text not null default '밴드 역계 백업용 페이지입니다.',
   extra_note text not null default '',
   notice text not null default '',
+  accent_color text not null default '#8B6F5C',
+  bg_color text not null default '#F7F5F2',
+  text_color text not null default '#1A1A1A',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

@@ -390,3 +390,38 @@ code {
 a.btn.primary {
   color: #fff;
 }
+
+.theme-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.theme-row input[type='color'] {
+  width: 100%;
+  height: 44px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  min-height: 44px;
+}
+
+.photo-row-one {
+  grid-template-columns: 1fr;
+  max-width: 320px;
+}
+
+.themed-page .section-title,
+.themed-page .subhead,
+.themed-page .toggle-btn,
+.themed-page .eyebrow,
+.themed-page .text-link {
+  color: var(--accent);
+}
+
+.themed-page .label,
+.themed-page .muted {
+  color: color-mix(in srgb, var(--text) 55%, transparent);
+}

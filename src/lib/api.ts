@@ -1,7 +1,13 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import { hashPin } from './auth'
 import type { ArchiveData, Band, BandCategory, Contacts, Profile } from '../types'
-import { EMPTY_CONTACTS, EMPTY_PROFILE, isValidSlug, normalizeSlug } from '../types'
+import {
+  DEFAULT_THEME,
+  EMPTY_CONTACTS,
+  EMPTY_PROFILE,
+  isValidSlug,
+  normalizeSlug,
+} from '../types'
 
 const LOCAL_KEY = 'band-hub-pages-v1'
 
@@ -56,6 +62,49 @@ function loadStore(): LocalStore {
 
 function saveStore(store: LocalStore): void {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(store))
+}
+
+function normalizeProfile(profile: Profile | (Omit<Profile, 'theme'> & { theme?: Profile['theme'] })): Profile {
+  return {
+    display_name: profile.display_name ?? '',
+    handle: profile.handle ?? '',
+    tagline: profile.tagline ?? '',
+    extra_note: profile.extra_note ?? '',
+    notice: profile.notice ?? '',
+    theme: {
+      accent: profile.theme?.accent || DEFAULT_THEME.accent,
+      bg: profile.theme?.bg || DEFAULT_THEME.bg,
+      text: profile.theme?.text || DEFAULT_THEME.text,
+    },
+  }
+}
+
+function profileToDb(profile: Profile) {
+  return {
+    display_name: profile.display_name,
+    handle: profile.handle,
+    tagline: profile.tagline,
+    extra_note: profile.extra_note,
+    notice: profile.notice,
+    accent_color: profile.theme.accent,
+    bg_color: profile.theme.bg,
+    text_color: profile.theme.text,
+  }
+}
+
+function profileFromDb(page: Record<string, unknown>): Profile {
+  return normalizeProfile({
+    display_name: String(page.display_name ?? ''),
+    handle: String(page.handle ?? ''),
+    tagline: String(page.tagline ?? ''),
+    extra_note: String(page.extra_note ?? ''),
+    notice: String(page.notice ?? ''),
+    theme: {
+      accent: String(page.accent_color ?? DEFAULT_THEME.accent),
+      bg: String(page.bg_color ?? DEFAULT_THEME.bg),
+      text: String(page.text_color ?? DEFAULT_THEME.text),
+    },
+  })
 }
 
 export const MAX_HUB_IMAGES_PER_PAGE = 20
@@ -131,7 +180,7 @@ export async function createPage(slugInput: string, pin: string): Promise<string
     store[slug] = {
       pageId,
       pinHash,
-      profile: { ...EMPTY_PROFILE },
+      profile: normalizeProfile({ ...EMPTY_PROFILE }),
       contacts: { ...EMPTY_CONTACTS },
       bands: emptyBands(),
     }
@@ -143,7 +192,7 @@ export async function createPage(slugInput: string, pin: string): Promise<string
     id: pageId,
     slug,
     pin_hash: pinHash,
-    ...EMPTY_PROFILE,
+    ...profileToDb(EMPTY_PROFILE),
   })
   if (pageError) throw pageError
 
@@ -193,7 +242,7 @@ export async function fetchArchive(slugInput: string): Promise<ArchiveData> {
     return {
       pageId: page.pageId,
       slug,
-      profile: page.profile,
+      profile: normalizeProfile(page.profile),
       contacts: page.contacts,
       bands: page.bands,
     }
@@ -217,13 +266,7 @@ export async function fetchArchive(slugInput: string): Promise<ArchiveData> {
   return {
     pageId: page.id,
     slug,
-    profile: {
-      display_name: page.display_name ?? EMPTY_PROFILE.display_name,
-      handle: page.handle ?? EMPTY_PROFILE.handle,
-      tagline: page.tagline ?? EMPTY_PROFILE.tagline,
-      extra_note: page.extra_note ?? EMPTY_PROFILE.extra_note,
-      notice: page.notice ?? EMPTY_PROFILE.notice,
-    },
+    profile: profileFromDb(page as Record<string, unknown>),
     contacts: contactsRes.data
       ? {
           main: contactsRes.data.main ?? '',
@@ -245,17 +288,18 @@ export async function fetchArchive(slugInput: string): Promise<ArchiveData> {
 }
 
 export async function saveProfile(slug: string, pageId: string, profile: Profile): Promise<void> {
+  const normalized = normalizeProfile(profile)
   if (!isSupabaseConfigured || !supabase) {
     const store = loadStore()
     if (!store[slug]) throw new Error('페이지 없음')
-    store[slug].profile = profile
+    store[slug].profile = normalized
     saveStore(store)
     return
   }
 
   const { error } = await supabase
     .from('pages')
-    .update({ ...profile, updated_at: new Date().toISOString() })
+    .update({ ...profileToDb(normalized), updated_at: new Date().toISOString() })
     .eq('id', pageId)
   if (error) throw error
 }

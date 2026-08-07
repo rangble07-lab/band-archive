@@ -254,6 +254,34 @@ function ProfileEditor({
           placeholder="(* 공지 문구입니다.)"
         />
       </label>
+      <div className="theme-row">
+        <label>
+          강조색
+          <input
+            type="color"
+            value={form.theme.accent}
+            onChange={(e) =>
+              setForm({ ...form, theme: { ...form.theme, accent: e.target.value } })
+            }
+          />
+        </label>
+        <label>
+          배경색
+          <input
+            type="color"
+            value={form.theme.bg}
+            onChange={(e) => setForm({ ...form, theme: { ...form.theme, bg: e.target.value } })}
+          />
+        </label>
+        <label>
+          글자색
+          <input
+            type="color"
+            value={form.theme.text}
+            onChange={(e) => setForm({ ...form, theme: { ...form.theme, text: e.target.value } })}
+          />
+        </label>
+      </div>
       <button type="button" className="btn primary" disabled={busy} onClick={() => onSave(form)}>
         프로필 저장
       </button>

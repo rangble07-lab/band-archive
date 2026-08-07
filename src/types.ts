@@ -1,11 +1,18 @@
 export type BandCategory = 'the_cast' | 'solar_c'
 
+export interface Theme {
+  accent: string
+  bg: string
+  text: string
+}
+
 export interface Profile {
   display_name: string
   handle: string
   tagline: string
   extra_note: string
   notice: string
+  theme: Theme
 }
 
 export interface Contacts {
@@ -33,18 +40,34 @@ export interface ArchiveData {
   bands: Band[]
 }
 
+export const DEFAULT_THEME: Theme = {
+  accent: '#8B6F5C',
+  bg: '#F7F5F2',
+  text: '#1A1A1A',
+}
+
 export const EMPTY_PROFILE: Profile = {
   display_name: '',
   handle: '',
   tagline: '',
   extra_note: '',
   notice: '',
+  theme: { ...DEFAULT_THEME },
 }
 
 export const EMPTY_CONTACTS: Contacts = {
-  main: '@_____',
-  sub: '@_____',
-  other: '_____',
+  main: '',
+  sub: '',
+  other: '',
+}
+
+export function isBandFilled(band: Band): boolean {
+  return Boolean(
+    band.band_name.trim() ||
+      band.face_name.trim() ||
+      band.cover_url ||
+      band.face_url,
+  )
 }
 
 export function normalizeSlug(raw: string): string {
