@@ -4,7 +4,7 @@ import { fetchArchive } from '../lib/api'
 import type { ArchiveData, Band } from '../types'
 import { isBandFilled } from '../types'
 import { BandCard, NoticeToggle, SectionTitle } from '../components/ui'
-import { isNoticeEmpty } from '../lib/richtext'
+import { linkifyText } from '../lib/linkify'
 
 function BandList({ bands }: { bands: Band[] }) {
   return (
@@ -95,6 +95,13 @@ export default function PublicPage() {
       document.body.style.background = ''
     }
   }, [data])
+
+  useEffect(() => {
+    document.title = 'BAND'
+    return () => {
+      document.title = 'BAND'
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -206,7 +213,7 @@ export default function PublicPage() {
           <hr className="rule" />
           <SectionTitle>기타 연락처</SectionTitle>
           <section className="contacts">
-            <p className="contacts-body">{contacts.text}</p>
+            <p className="contacts-body">{linkifyText(contacts.text)}</p>
           </section>
         </>
       ) : null}
