@@ -56,8 +56,6 @@ export default function PublicPage() {
   const { profile, contacts, bands } = data
   const theCast = bands.filter((b) => b.category === 'the_cast')
   const solar = bands.filter((b) => b.category === 'solar_c')
-  const shareUrl =
-    typeof window !== 'undefined' ? `${window.location.origin}/p/${data.slug}` : `/p/${data.slug}`
 
   return (
     <main className="page">
