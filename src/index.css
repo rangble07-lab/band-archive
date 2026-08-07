@@ -27,6 +27,11 @@ body,
   background: var(--bg);
 }
 
+#root {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
 body {
   min-width: 320px;
 }

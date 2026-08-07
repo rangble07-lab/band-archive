@@ -35,6 +35,42 @@ export default function PublicPage() {
     }
   }, [slug])
 
+  useEffect(() => {
+    if (!data?.profile.theme) return
+    const root = document.documentElement
+    const { bg, text, accent } = data.profile.theme
+    const prev = {
+      bg: root.style.getPropertyValue('--bg'),
+      text: root.style.getPropertyValue('--text'),
+      accent: root.style.getPropertyValue('--accent'),
+      muted: root.style.getPropertyValue('--muted'),
+      line: root.style.getPropertyValue('--line'),
+      card: root.style.getPropertyValue('--card'),
+      color: root.style.color,
+      background: root.style.background,
+    }
+    root.style.setProperty('--bg', bg)
+    root.style.setProperty('--text', text)
+    root.style.setProperty('--accent', accent)
+    root.style.setProperty('--muted', text)
+    root.style.setProperty('--line', `${accent}33`)
+    root.style.setProperty('--card', bg)
+    root.style.color = text
+    root.style.background = bg
+    document.body.style.background = bg
+    return () => {
+      root.style.setProperty('--bg', prev.bg)
+      root.style.setProperty('--text', prev.text)
+      root.style.setProperty('--accent', prev.accent)
+      root.style.setProperty('--muted', prev.muted)
+      root.style.setProperty('--line', prev.line)
+      root.style.setProperty('--card', prev.card)
+      root.style.color = prev.color
+      root.style.background = prev.background
+      document.body.style.background = ''
+    }
+  }, [data])
+
   if (loading) {
     return (
       <main className="page">
@@ -67,13 +103,6 @@ export default function PublicPage() {
   )
 
   const themeStyle = {
-    '--bg': profile.theme.bg,
-    '--text': profile.theme.text,
-    '--accent': profile.theme.accent,
-    '--muted': profile.theme.text,
-    '--line': `${profile.theme.accent}33`,
-    '--card': profile.theme.bg,
-    background: profile.theme.bg,
     color: profile.theme.text,
   } as CSSProperties
 
