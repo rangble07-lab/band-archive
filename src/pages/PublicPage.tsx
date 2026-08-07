@@ -5,6 +5,7 @@ import type { ArchiveData, Band } from '../types'
 import { isBandFilled } from '../types'
 import { BandCard, NoticeToggle, SectionTitle } from '../components/ui'
 import { linkifyText } from '../lib/linkify'
+import { isNoticeEmpty } from '../lib/richtext'
 
 function BandList({ bands }: { bands: Band[] }) {
   return (
