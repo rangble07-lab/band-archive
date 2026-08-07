@@ -1,5 +1,20 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent, type CSSProperties } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { isEditUnlocked, lockEdit, unlockEdit } from '../lib/auth'
 import {
   MAX_HUB_IMAGES_PER_PAGE,
@@ -9,6 +24,7 @@ import {
   deleteBand,
   fetchArchive,
   isHubHostedImage,
+  reorderBands,
   saveContacts,
   saveProfile,
   uploadBandImage,
@@ -350,6 +366,26 @@ function BandSection({
   busy: boolean
   onChange: (fn: () => Promise<void>, msg: string) => Promise<void>
 }) {
+  const [items, setItems] = useState(bands)
+  useEffect(() => setItems(bands), [bands])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+  )
+
+  async function onDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = items.findIndex((b) => b.id === active.id)
+    const newIndex = items.findIndex((b) => b.id === over.id)
+    if (oldIndex < 0 || newIndex < 0) return
+    const next = arrayMove(items, oldIndex, newIndex).map((b, i) => ({ ...b, sort_order: i }))
+    setItems(next)
+    await onChange(() => reorderBands(slug, next.map((b) => b.id)), '순서 저장됨')
+  }
+
   return (
     <section className="edit-card">
       <div className="row-between">
@@ -365,18 +401,51 @@ function BandSection({
           + 추가
         </button>
       </div>
-      {bands.map((band) => (
-        <BandEditor
-          key={band.id}
-          slug={slug}
-          pageId={pageId}
-          band={band}
-          hubUsed={countHubImages(allBands)}
-          busy={busy}
-          onChange={onChange}
-        />
-      ))}
+      <p className="muted drag-hint">왼쪽 ☰ 을 드래그해서 순서를 바꿀 수 있어요.</p>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => void onDragEnd(e)}>
+        <SortableContext items={items.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+          {items.map((band) => (
+            <SortableBandEditor
+              key={band.id}
+              slug={slug}
+              pageId={pageId}
+              band={band}
+              hubUsed={countHubImages(allBands)}
+              busy={busy}
+              onChange={onChange}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
     </section>
+  )
+}
+
+function SortableBandEditor(props: {
+  slug: string
+  pageId: string
+  band: Band
+  hubUsed: number
+  busy: boolean
+  onChange: (fn: () => Promise<void>, msg: string) => Promise<void>
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.band.id,
+  })
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.85 : 1,
+    zIndex: isDragging ? 2 : undefined,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className={`sortable-band${isDragging ? ' is-dragging' : ''}`}>
+      <button type="button" className="drag-handle" aria-label="순서 변경" {...attributes} {...listeners}>
+        ☰
+      </button>
+      <BandEditor {...props} />
+    </div>
   )
 }
 
@@ -416,6 +485,24 @@ function BandEditor({
 
   return (
     <div className="band-editor">
+      <label>
+        년도
+        <input
+          type="number"
+          inputMode="numeric"
+          value={form.year ?? ''}
+          onChange={(e) => {
+            const raw = e.target.value.trim()
+            if (raw === '') {
+              setForm({ ...form, year: null })
+              return
+            }
+            const n = Number(raw)
+            setForm({ ...form, year: Number.isFinite(n) ? Math.trunc(n) : null })
+          }}
+          placeholder="예: 2024"
+        />
+      </label>
       <label>
         밴드명
         <input

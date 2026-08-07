@@ -1,10 +1,34 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchArchive } from '../lib/api'
-import type { ArchiveData } from '../types'
+import type { ArchiveData, Band } from '../types'
 import { isBandFilled } from '../types'
 import { BandCard, NoticeToggle, SectionTitle } from '../components/ui'
 import { isNoticeEmpty } from '../lib/richtext'
+
+function BandList({ bands }: { bands: Band[] }) {
+  return (
+    <>
+      {bands.map((b, i) => {
+        const prev = i > 0 ? bands[i - 1] : null
+        const yearChanged = prev != null && prev.year !== b.year
+        const showYear = b.year != null && (prev == null || prev.year !== b.year)
+        return (
+          <div key={b.id}>
+            {yearChanged ? <hr className="year-rule" /> : null}
+            {showYear ? <p className="year-label">{b.year}</p> : null}
+            <BandCard
+              bandName={b.band_name}
+              faceName={b.face_name}
+              coverUrl={b.cover_url}
+              faceUrl={b.face_url}
+            />
+          </div>
+        )
+      })}
+    </>
+  )
+}
 
 export default function PublicPage() {
   const { slug = '' } = useParams()
@@ -152,15 +176,7 @@ export default function PublicPage() {
           <hr className="rule" />
           <section className="block">
             <h3 className="subhead">더 캐스트 기반</h3>
-            {theCast.map((b) => (
-              <BandCard
-                key={b.id}
-                bandName={b.band_name}
-                faceName={b.face_name}
-                coverUrl={b.cover_url}
-                faceUrl={b.face_url}
-              />
-            ))}
+            <BandList bands={theCast} />
           </section>
         </>
       ) : null}
@@ -170,15 +186,7 @@ export default function PublicPage() {
           <hr className="rule" />
           <section className="block">
             <h3 className="subhead">SOLAR - C 기반</h3>
-            {solar.map((b) => (
-              <BandCard
-                key={b.id}
-                bandName={b.band_name}
-                faceName={b.face_name}
-                coverUrl={b.cover_url}
-                faceUrl={b.face_url}
-              />
-            ))}
+            <BandList bands={solar} />
           </section>
         </>
       ) : null}
@@ -188,15 +196,7 @@ export default function PublicPage() {
           <hr className="rule" />
           <section className="block">
             <h3 className="subhead">SOLAR - C 1차</h3>
-            {solar1st.map((b) => (
-              <BandCard
-                key={b.id}
-                bandName={b.band_name}
-                faceName={b.face_name}
-                coverUrl={b.cover_url}
-                faceUrl={b.face_url}
-              />
-            ))}
+            <BandList bands={solar1st} />
           </section>
         </>
       ) : null}

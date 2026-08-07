@@ -27,6 +27,7 @@ export interface Band {
   handle: string
   cover_url: string | null
   face_url: string | null
+  year: number | null
   sort_order: number
 }
 

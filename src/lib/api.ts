@@ -36,6 +36,7 @@ function emptyBand(category: BandCategory, sort_order: number): Band {
     handle: '',
     cover_url: null,
     face_url: null,
+    year: null,
     sort_order,
   }
 }
@@ -129,6 +130,18 @@ function isMissingThemeColumn(error: { message?: string; details?: string; hint?
     text.includes('text_color') ||
     text.includes('schema cache')
   )
+}
+
+function isMissingYearColumn(error: { message?: string; details?: string; hint?: string } | null): boolean {
+  const text = `${error?.message ?? ''} ${error?.details ?? ''} ${error?.hint ?? ''}`.toLowerCase()
+  return text.includes('year') || text.includes('schema cache')
+}
+
+function normalizeYear(value: unknown): number | null {
+  if (value == null || value === '') return null
+  const n = typeof value === 'number' ? value : Number(String(value).trim())
+  if (!Number.isFinite(n)) return null
+  return Math.trunc(n)
 }
 
 function profileFromDb(page: Record<string, unknown>): Profile {
@@ -291,7 +304,10 @@ export async function fetchArchive(slugInput: string): Promise<ArchiveData> {
       slug,
       profile: normalizeProfile(page.profile),
       contacts: normalizeContacts(page.contacts),
-      bands: page.bands,
+      bands: page.bands.map((b) => ({
+        ...b,
+        year: normalizeYear(b.year),
+      })),
     }
   }
 
@@ -323,6 +339,7 @@ export async function fetchArchive(slugInput: string): Promise<ArchiveData> {
       handle: row.handle ?? '',
       cover_url: publicUrl(row.cover_path),
       face_url: publicUrl(row.face_path),
+      year: normalizeYear((row as { year?: unknown }).year),
       sort_order: row.sort_order ?? 0,
     })),
   }
@@ -373,6 +390,7 @@ export async function upsertBand(slug: string, pageId: string, band: Band): Prom
   const face_path = normalizeImageUrl(band.face_url)
   const next: Band = {
     ...band,
+    year: normalizeYear(band.year),
     cover_url: cover_path,
     face_url: face_path,
   }
@@ -396,12 +414,45 @@ export async function upsertBand(slug: string, pageId: string, band: Band): Prom
     handle: band.handle,
     cover_path,
     face_path,
+    year: next.year,
     sort_order: band.sort_order,
   }
 
-  const { error } = await supabase.from('bands').upsert(row)
+  let { error } = await supabase.from('bands').upsert(row)
+  if (error && isMissingYearColumn(error)) {
+    const { year: _year, ...withoutYear } = row
+    ;({ error } = await supabase.from('bands').upsert(withoutYear))
+  }
   if (error) throw error
   return next
+}
+
+export async function reorderBands(slug: string, orderedIds: string[]): Promise<void> {
+  if (!orderedIds.length) return
+
+  if (!isSupabaseConfigured || !supabase) {
+    const store = loadStore()
+    if (!store[slug]) throw new Error('페이지 없음')
+    store[slug].bands = store[slug].bands.map((b) => {
+      const idx = orderedIds.indexOf(b.id)
+      return idx >= 0 ? { ...b, sort_order: idx } : b
+    })
+    store[slug].bands.sort((a, b) => {
+      if (a.category !== b.category) return a.category.localeCompare(b.category)
+      return a.sort_order - b.sort_order
+    })
+    saveStore(store)
+    return
+  }
+
+  const client = supabase
+  if (!client) throw new Error('Supabase 미설정')
+  const updates = orderedIds.map((id, sort_order) =>
+    client.from('bands').update({ sort_order }).eq('id', id),
+  )
+  const results = await Promise.all(updates)
+  const firstError = results.find((r) => r.error)?.error
+  if (firstError) throw firstError
 }
 
 export async function deleteBand(slug: string, id: string): Promise<void> {
@@ -432,6 +483,7 @@ export async function createBand(
     handle: '',
     cover_url: null,
     face_url: null,
+    year: null,
     sort_order: same.length,
   }
   return upsertBand(slug, pageId, band)
