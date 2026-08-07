@@ -143,10 +143,9 @@ export default function EditPage() {
       {status ? <p className="status">{status}</p> : null}
 
       <p className="muted image-quota">
-        허브 업로드 {countHubImages(data.bands)}/{MAX_HUB_IMAGES_PER_PAGE}장 · 장당{' '}
-        {Math.round(MAX_UPLOAD_BYTES / 1024)}KB 이하
+        이미지 업로드 {countHubImages(data.bands)}/{MAX_HUB_IMAGES_PER_PAGE}장 · 장당 1MB 이하
         <br />
-        한도를 넘기면 Imgur / Catbox / Discord 등 <strong>이미지 링크</strong>를 붙여 주세요.
+        한도를 넘기면 Imgur / Catbox / Discord 등 이미지 링크를 붙여 주세요.
       </p>
 
       <ProfileEditor
@@ -432,7 +431,7 @@ function BandEditor({
 
       {atLimit ? (
         <p className="muted">
-          허브 업로드 한도({MAX_HUB_IMAGES_PER_PAGE}장)에 도달했습니다. 추가는 아래 URL로 넣어
+          이미지 업로드 한도({MAX_HUB_IMAGES_PER_PAGE}장)에 도달했습니다. 추가는 아래 URL로 넣어
           주세요.
         </p>
       ) : null}
@@ -491,7 +490,7 @@ function ImageSlot({
         <div className="photo-empty sm">없음</div>
       )}
       <label className={`btn ghost file-btn${uploadDisabled ? ' is-disabled' : ''}`}>
-        업로드 (≤1MB)
+        업로드 1MB 이하
         <input
           type="file"
           accept="image/*"
@@ -514,7 +513,7 @@ function ImageSlot({
           placeholder="https://…"
         />
       </label>
-      {isHub ? <p className="muted tiny">현재: 허브 업로드</p> : null}
+      {isHub ? <p className="muted tiny">현재: 이미지 업로드</p> : null}
     </div>
   )
 }
