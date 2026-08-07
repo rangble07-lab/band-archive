@@ -79,17 +79,31 @@ function normalizeProfile(profile: Profile | (Omit<Profile, 'theme'> & { theme?:
   }
 }
 
-function profileToDb(profile: Profile) {
-  return {
+function profileToDb(profile: Profile, withTheme = true) {
+  const base = {
     display_name: profile.display_name,
     handle: profile.handle,
     tagline: profile.tagline,
     extra_note: profile.extra_note,
     notice: profile.notice,
+  }
+  if (!withTheme) return base
+  return {
+    ...base,
     accent_color: profile.theme.accent,
     bg_color: profile.theme.bg,
     text_color: profile.theme.text,
   }
+}
+
+function isMissingThemeColumn(error: { message?: string; details?: string; hint?: string } | null): boolean {
+  const text = `${error?.message ?? ''} ${error?.details ?? ''} ${error?.hint ?? ''}`.toLowerCase()
+  return (
+    text.includes('accent_color') ||
+    text.includes('bg_color') ||
+    text.includes('text_color') ||
+    text.includes('schema cache')
+  )
 }
 
 function profileFromDb(page: Record<string, unknown>): Profile {
@@ -188,12 +202,20 @@ export async function createPage(slugInput: string, pin: string): Promise<string
     return slug
   }
 
-  const { error: pageError } = await supabase.from('pages').insert({
+  let { error: pageError } = await supabase.from('pages').insert({
     id: pageId,
     slug,
     pin_hash: pinHash,
     ...profileToDb(EMPTY_PROFILE),
   })
+  if (pageError && isMissingThemeColumn(pageError)) {
+    ;({ error: pageError } = await supabase.from('pages').insert({
+      id: pageId,
+      slug,
+      pin_hash: pinHash,
+      ...profileToDb(EMPTY_PROFILE, false),
+    }))
+  }
   if (pageError) throw pageError
 
   const { error: contactsError } = await supabase.from('contacts').insert({
@@ -297,10 +319,16 @@ export async function saveProfile(slug: string, pageId: string, profile: Profile
     return
   }
 
-  const { error } = await supabase
+  let { error } = await supabase
     .from('pages')
     .update({ ...profileToDb(normalized), updated_at: new Date().toISOString() })
     .eq('id', pageId)
+  if (error && isMissingThemeColumn(error)) {
+    ;({ error } = await supabase
+      .from('pages')
+      .update({ ...profileToDb(normalized, false), updated_at: new Date().toISOString() })
+      .eq('id', pageId))
+  }
   if (error) throw error
 }
 
