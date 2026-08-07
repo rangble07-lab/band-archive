@@ -31,8 +31,8 @@ create table if not exists public.bands (
   band_name text not null default '',
   face_name text not null default '',
   handle text not null default '',
-  cover_path text,
-  face_path text,
+  cover_path text, -- external image URL (Imgur/Catbox/Discord/etc.)
+  face_path text,  -- external image URL
   sort_order int not null default 0,
   created_at timestamptz default now()
 );

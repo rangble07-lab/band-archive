@@ -2,20 +2,17 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { isEditUnlocked, lockEdit, unlockEdit } from '../lib/auth'
 import {
-  clearBandImage,
   createBand,
   deleteBand,
   fetchArchive,
   saveContacts,
   saveProfile,
   storageModeLabel,
-  uploadBandImage,
   upsertBand,
   verifyPagePin,
 } from '../lib/api'
 import type { ArchiveData, Band, BandCategory, Contacts, Profile } from '../types'
 import { SectionTitle } from '../components/ui'
-import { isSupabaseConfigured } from '../lib/supabase'
 
 export default function EditPage() {
   const { slug = '' } = useParams()
@@ -340,22 +337,6 @@ function BandEditor({
   const [form, setForm] = useState(band)
   useEffect(() => setForm(band), [band])
 
-  async function onFile(kind: 'cover' | 'face', file: File | null) {
-    if (!file) return
-    await onChange(async () => {
-      const url = await uploadBandImage(slug, pageId, band.id, kind, file)
-      const next = {
-        ...form,
-        cover_url: kind === 'cover' ? url : form.cover_url,
-        face_url: kind === 'face' ? url : form.face_url,
-      }
-      setForm(next)
-      if (!isSupabaseConfigured) {
-        await upsertBand(slug, pageId, next)
-      }
-    }, `${kind === 'cover' ? '밴드 커버' : '낯'} 사진 업로드됨`)
-  }
-
   return (
     <div className="band-editor">
       <label>
@@ -374,37 +355,28 @@ function BandEditor({
           placeholder="낯"
         />
       </label>
-
-      <div className="photo-edit-row">
-        <ImageField
-          label="밴드 커버"
-          url={form.cover_url}
-          disabled={busy}
-          onPick={(f) => onFile('cover', f)}
-          onClear={() =>
-            onChange(async () => {
-              await clearBandImage(slug, band.id, 'cover')
-              const next = { ...form, cover_url: null }
-              setForm(next)
-              if (!isSupabaseConfigured) await upsertBand(slug, pageId, next)
-            }, '밴드 커버 삭제됨')
-          }
+      <label>
+        밴드 커버 URL
+        <input
+          value={form.cover_url ?? ''}
+          onChange={(e) => setForm({ ...form, cover_url: e.target.value })}
+          placeholder="https://… (Imgur, Catbox, Discord 등)"
         />
-        <ImageField
-          label="낯"
-          url={form.face_url}
-          disabled={busy}
-          onPick={(f) => onFile('face', f)}
-          onClear={() =>
-            onChange(async () => {
-              await clearBandImage(slug, band.id, 'face')
-              const next = { ...form, face_url: null }
-              setForm(next)
-              if (!isSupabaseConfigured) await upsertBand(slug, pageId, next)
-            }, '낯 사진 삭제됨')
-          }
+      </label>
+      {form.cover_url ? (
+        <img src={form.cover_url} alt="커버 미리보기" className="thumb preview-thumb" />
+      ) : null}
+      <label>
+        낯 사진 URL
+        <input
+          value={form.face_url ?? ''}
+          onChange={(e) => setForm({ ...form, face_url: e.target.value })}
+          placeholder="https://… (Imgur, Catbox, Discord 등)"
         />
-      </div>
+      </label>
+      {form.face_url ? (
+        <img src={form.face_url} alt="낯 미리보기" className="thumb preview-thumb" />
+      ) : null}
 
       <div className="row-between">
         <button
@@ -430,43 +402,6 @@ function BandEditor({
           삭제
         </button>
       </div>
-    </div>
-  )
-}
-
-function ImageField({
-  label,
-  url,
-  disabled,
-  onPick,
-  onClear,
-}: {
-  label: string
-  url: string | null
-  disabled: boolean
-  onPick: (file: File | null) => void
-  onClear: () => void
-}) {
-  return (
-    <div className="image-field">
-      <p className="label">{label}</p>
-      {url ? <img src={url} alt={label} className="thumb" /> : <div className="photo-empty sm">없음</div>}
-      <label className="btn ghost file-btn">
-        사진 선택
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          disabled={disabled}
-          hidden
-          onChange={(e) => onPick(e.target.files?.[0] ?? null)}
-        />
-      </label>
-      {url ? (
-        <button type="button" className="btn ghost" disabled={disabled} onClick={onClear}>
-          사진 삭제
-        </button>
-      ) : null}
     </div>
   )
 }

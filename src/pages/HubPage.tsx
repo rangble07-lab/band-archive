@@ -56,7 +56,9 @@ export default function HubPage() {
 
       <section className="edit-card">
         <h2 className="section-title">내 페이지 만들기</h2>
-        <p className="muted">주소와 PIN만 정하면 바로 시작할 수 있어요.</p>
+        <p className="muted">
+          사진은 Imgur / Catbox / Discord 등에 올린 뒤 <strong>링크만</strong> 붙여넣으면 됩니다.
+        </p>
         <form className="pin-form" onSubmit={onCreate}>
           <label>
             페이지 주소

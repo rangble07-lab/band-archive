@@ -59,19 +59,16 @@ function saveStore(store: LocalStore): void {
 }
 
 function publicUrl(path: string | null): string | null {
-  if (!path || !supabase) return path
-  if (path.startsWith('http') || path.startsWith('data:')) return path
+  if (!path) return null
+  if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('//')) return path
+  if (!supabase) return path
   const { data } = supabase.storage.from('band-images').getPublicUrl(path)
   return data.publicUrl
 }
 
-function pathFromPublicUrl(url: string | null): string | null {
-  if (!url) return null
-  if (url.includes('/object/public/band-images/')) {
-    return url.split('/object/public/band-images/')[1] ?? null
-  }
-  if (!url.startsWith('http') && !url.startsWith('data:')) return url
-  return null
+function normalizeImageUrl(url: string | null | undefined): string | null {
+  const trimmed = url?.trim() ?? ''
+  return trimmed ? trimmed : null
 }
 
 export function storageModeLabel(): string {
@@ -258,30 +255,23 @@ export async function saveContacts(slug: string, pageId: string, contacts: Conta
 }
 
 export async function upsertBand(slug: string, pageId: string, band: Band): Promise<Band> {
+  const cover_path = normalizeImageUrl(band.cover_url)
+  const face_path = normalizeImageUrl(band.face_url)
+  const next: Band = {
+    ...band,
+    cover_url: cover_path,
+    face_url: face_path,
+  }
+
   if (!isSupabaseConfigured || !supabase) {
     const store = loadStore()
     if (!store[slug]) throw new Error('페이지 없음')
     const idx = store[slug].bands.findIndex((b) => b.id === band.id)
-    if (idx >= 0) store[slug].bands[idx] = band
-    else store[slug].bands.push(band)
+    if (idx >= 0) store[slug].bands[idx] = next
+    else store[slug].bands.push(next)
     saveStore(store)
-    return band
+    return next
   }
-
-  const { data: existing } = await supabase
-    .from('bands')
-    .select('cover_path, face_path')
-    .eq('id', band.id)
-    .maybeSingle()
-
-  const cover_path =
-    band.cover_url === null
-      ? null
-      : (pathFromPublicUrl(band.cover_url) ?? existing?.cover_path ?? null)
-  const face_path =
-    band.face_url === null
-      ? null
-      : (pathFromPublicUrl(band.face_url) ?? existing?.face_path ?? null)
 
   const row = {
     id: band.id,
@@ -297,11 +287,7 @@ export async function upsertBand(slug: string, pageId: string, band: Band): Prom
 
   const { error } = await supabase.from('bands').upsert(row)
   if (error) throw error
-  return {
-    ...band,
-    cover_url: publicUrl(cover_path),
-    face_url: publicUrl(face_path),
-  }
+  return next
 }
 
 export async function deleteBand(slug: string, id: string): Promise<void> {
@@ -335,70 +321,4 @@ export async function createBand(
     sort_order: same.length,
   }
   return upsertBand(slug, pageId, band)
-}
-
-async function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
-  })
-}
-
-export async function uploadBandImage(
-  slug: string,
-  pageId: string,
-  bandId: string,
-  kind: 'cover' | 'face',
-  file: File,
-): Promise<string> {
-  if (!isSupabaseConfigured || !supabase) {
-    const url = await fileToDataUrl(file)
-    const store = loadStore()
-    const band = store[slug]?.bands.find((b) => b.id === bandId)
-    if (!band) throw new Error('밴드 없음')
-    if (kind === 'cover') band.cover_url = url
-    else band.face_url = url
-    saveStore(store)
-    return url
-  }
-
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-  const path = `${pageId}/${kind}s/${bandId}-${Date.now()}.${ext}`
-
-  const { error } = await supabase.storage.from('band-images').upload(path, file, {
-    upsert: true,
-    contentType: file.type || 'image/jpeg',
-  })
-  if (error) throw error
-
-  const column = kind === 'cover' ? 'cover_path' : 'face_path'
-  const { error: updateError } = await supabase
-    .from('bands')
-    .update({ [column]: path })
-    .eq('id', bandId)
-  if (updateError) throw updateError
-
-  return publicUrl(path)!
-}
-
-export async function clearBandImage(
-  slug: string,
-  bandId: string,
-  kind: 'cover' | 'face',
-): Promise<void> {
-  if (!isSupabaseConfigured || !supabase) {
-    const store = loadStore()
-    const band = store[slug]?.bands.find((b) => b.id === bandId)
-    if (!band) return
-    if (kind === 'cover') band.cover_url = null
-    else band.face_url = null
-    saveStore(store)
-    return
-  }
-
-  const column = kind === 'cover' ? 'cover_path' : 'face_path'
-  const { error } = await supabase.from('bands').update({ [column]: null }).eq('id', bandId)
-  if (error) throw error
 }
