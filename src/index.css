@@ -356,3 +356,18 @@ code {
   width: min(160px, 40vw);
   margin-bottom: 12px;
 }
+
+.image-quota {
+  margin: 0 0 16px;
+  line-height: 1.45;
+}
+
+.tiny {
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.file-btn.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}

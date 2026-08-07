@@ -2,12 +2,18 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { isEditUnlocked, lockEdit, unlockEdit } from '../lib/auth'
 import {
+  MAX_HUB_IMAGES_PER_PAGE,
+  MAX_UPLOAD_BYTES,
+  clearBandImage,
+  countHubImages,
   createBand,
   deleteBand,
   fetchArchive,
+  isHubHostedImage,
   saveContacts,
   saveProfile,
   storageModeLabel,
+  uploadBandImage,
   upsertBand,
   verifyPagePin,
 } from '../lib/api'
@@ -137,6 +143,13 @@ export default function EditPage() {
 
       {status ? <p className="status">{status}</p> : null}
 
+      <p className="muted image-quota">
+        허브 업로드 {countHubImages(data.bands)}/{MAX_HUB_IMAGES_PER_PAGE}장 · 장당{' '}
+        {Math.round(MAX_UPLOAD_BYTES / 1024)}KB 이하
+        <br />
+        한도를 넘기면 Imgur / Catbox / Discord 등 <strong>이미지 링크</strong>를 붙여 주세요.
+      </p>
+
       <ProfileEditor
         profile={data.profile}
         busy={busy}
@@ -151,6 +164,7 @@ export default function EditPage() {
         slug={slug}
         pageId={data.pageId}
         bands={data.bands.filter((b) => b.category === 'the_cast')}
+        allBands={data.bands}
         busy={busy}
         onChange={withBusy}
       />
@@ -161,6 +175,7 @@ export default function EditPage() {
         slug={slug}
         pageId={data.pageId}
         bands={data.bands.filter((b) => b.category === 'solar_c')}
+        allBands={data.bands}
         busy={busy}
         onChange={withBusy}
       />
@@ -281,6 +296,7 @@ function BandSection({
   slug,
   pageId,
   bands,
+  allBands,
   busy,
   onChange,
 }: {
@@ -289,6 +305,7 @@ function BandSection({
   slug: string
   pageId: string
   bands: Band[]
+  allBands: Band[]
   busy: boolean
   onChange: (fn: () => Promise<void>, msg: string) => Promise<void>
 }) {
@@ -313,6 +330,7 @@ function BandSection({
           slug={slug}
           pageId={pageId}
           band={band}
+          hubUsed={countHubImages(allBands)}
           busy={busy}
           onChange={onChange}
         />
@@ -325,17 +343,35 @@ function BandEditor({
   slug,
   pageId,
   band,
+  hubUsed,
   busy,
   onChange,
 }: {
   slug: string
   pageId: string
   band: Band
+  hubUsed: number
   busy: boolean
   onChange: (fn: () => Promise<void>, msg: string) => Promise<void>
 }) {
   const [form, setForm] = useState(band)
   useEffect(() => setForm(band), [band])
+
+  async function onFile(kind: 'cover' | 'face', file: File | null) {
+    if (!file) return
+    await onChange(async () => {
+      const url = await uploadBandImage(slug, pageId, band.id, kind, file)
+      setForm({
+        ...form,
+        cover_url: kind === 'cover' ? url : form.cover_url,
+        face_url: kind === 'face' ? url : form.face_url,
+      })
+    }, `${kind === 'cover' ? '밴드 커버' : '낯'} 업로드됨`)
+  }
+
+  const coverIsHub = isHubHostedImage(form.cover_url)
+  const faceIsHub = isHubHostedImage(form.face_url)
+  const atLimit = hubUsed >= MAX_HUB_IMAGES_PER_PAGE
 
   return (
     <div className="band-editor">
@@ -355,27 +391,43 @@ function BandEditor({
           placeholder="낯"
         />
       </label>
-      <label>
-        밴드 커버 URL
-        <input
-          value={form.cover_url ?? ''}
-          onChange={(e) => setForm({ ...form, cover_url: e.target.value })}
-          placeholder="https://… (Imgur, Catbox, Discord 등)"
+
+      <div className="photo-edit-row">
+        <ImageSlot
+          label="밴드 커버"
+          url={form.cover_url}
+          isHub={coverIsHub}
+          uploadDisabled={busy || (atLimit && !coverIsHub)}
+          onUrlChange={(v) => setForm({ ...form, cover_url: v })}
+          onPick={(f) => onFile('cover', f)}
+          onClearHub={() =>
+            onChange(async () => {
+              await clearBandImage(slug, band.id, 'cover')
+              setForm({ ...form, cover_url: null })
+            }, '밴드 커버 삭제됨')
+          }
         />
-      </label>
-      {form.cover_url ? (
-        <img src={form.cover_url} alt="커버 미리보기" className="thumb preview-thumb" />
-      ) : null}
-      <label>
-        낯 사진 URL
-        <input
-          value={form.face_url ?? ''}
-          onChange={(e) => setForm({ ...form, face_url: e.target.value })}
-          placeholder="https://… (Imgur, Catbox, Discord 등)"
+        <ImageSlot
+          label="낯"
+          url={form.face_url}
+          isHub={faceIsHub}
+          uploadDisabled={busy || (atLimit && !faceIsHub)}
+          onUrlChange={(v) => setForm({ ...form, face_url: v })}
+          onPick={(f) => onFile('face', f)}
+          onClearHub={() =>
+            onChange(async () => {
+              await clearBandImage(slug, band.id, 'face')
+              setForm({ ...form, face_url: null })
+            }, '낯 사진 삭제됨')
+          }
         />
-      </label>
-      {form.face_url ? (
-        <img src={form.face_url} alt="낯 미리보기" className="thumb preview-thumb" />
+      </div>
+
+      {atLimit ? (
+        <p className="muted">
+          허브 업로드 한도({MAX_HUB_IMAGES_PER_PAGE}장)에 도달했습니다. 추가는 아래 URL로 넣어
+          주세요.
+        </p>
       ) : null}
 
       <div className="row-between">
@@ -402,6 +454,60 @@ function BandEditor({
           삭제
         </button>
       </div>
+    </div>
+  )
+}
+
+function ImageSlot({
+  label,
+  url,
+  isHub,
+  uploadDisabled,
+  onUrlChange,
+  onPick,
+  onClearHub,
+}: {
+  label: string
+  url: string | null
+  isHub: boolean
+  uploadDisabled: boolean
+  onUrlChange: (v: string) => void
+  onPick: (file: File | null) => void
+  onClearHub: () => void
+}) {
+  return (
+    <div className="image-field">
+      <p className="label">{label}</p>
+      {url ? (
+        <img src={url} alt={label} className="thumb" />
+      ) : (
+        <div className="photo-empty sm">없음</div>
+      )}
+      <label className={`btn ghost file-btn${uploadDisabled ? ' is-disabled' : ''}`}>
+        업로드 (≤1MB)
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          disabled={uploadDisabled}
+          hidden
+          onChange={(e) => onPick(e.target.files?.[0] ?? null)}
+        />
+      </label>
+      {isHub && url ? (
+        <button type="button" className="btn ghost" onClick={onClearHub}>
+          업로드 삭제
+        </button>
+      ) : null}
+      <label>
+        또는 링크
+        <input
+          value={isHub ? '' : (url ?? '')}
+          onChange={(e) => onUrlChange(e.target.value)}
+          placeholder="https://…"
+        />
+      </label>
+      {isHub ? <p className="muted tiny">현재: 허브 업로드</p> : null}
     </div>
   )
 }

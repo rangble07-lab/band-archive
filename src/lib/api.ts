@@ -58,6 +58,9 @@ function saveStore(store: LocalStore): void {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(store))
 }
 
+export const MAX_HUB_IMAGES_PER_PAGE = 20
+export const MAX_UPLOAD_BYTES = 1 * 1024 * 1024 // 1MB
+
 function publicUrl(path: string | null): string | null {
   if (!path) return null
   if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('//')) return path
@@ -69,6 +72,26 @@ function publicUrl(path: string | null): string | null {
 function normalizeImageUrl(url: string | null | undefined): string | null {
   const trimmed = url?.trim() ?? ''
   return trimmed ? trimmed : null
+}
+
+/** Hub-hosted (counts toward quota). External https links do not. */
+export function isHubHostedImage(url: string | null | undefined): boolean {
+  if (!url) return false
+  const u = url.trim()
+  if (!u) return false
+  if (u.startsWith('data:')) return true
+  if (u.includes('/object/public/band-images/') || u.includes('/band-images/')) return true
+  if (!/^https?:\/\//i.test(u) && !u.startsWith('//')) return true
+  return false
+}
+
+export function countHubImages(bands: Band[]): number {
+  let n = 0
+  for (const b of bands) {
+    if (isHubHostedImage(b.cover_url)) n += 1
+    if (isHubHostedImage(b.face_url)) n += 1
+  }
+  return n
 }
 
 export function storageModeLabel(): string {
@@ -321,4 +344,87 @@ export async function createBand(
     sort_order: same.length,
   }
   return upsertBand(slug, pageId, band)
+}
+
+async function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+export async function uploadBandImage(
+  slug: string,
+  pageId: string,
+  bandId: string,
+  kind: 'cover' | 'face',
+  file: File,
+): Promise<string> {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error('장당 1MB까지 업로드할 수 있습니다. 더 큰 사진은 외부 링크를 붙여 주세요.')
+  }
+
+  const archive = await fetchArchive(slug)
+  const band = archive.bands.find((b) => b.id === bandId)
+  if (!band) throw new Error('밴드 없음')
+
+  const currentSlot = kind === 'cover' ? band.cover_url : band.face_url
+  const replacingHub = isHubHostedImage(currentSlot)
+  const used = countHubImages(archive.bands)
+  if (!replacingHub && used >= MAX_HUB_IMAGES_PER_PAGE) {
+    throw new Error(
+      `허브 업로드는 페이지당 ${MAX_HUB_IMAGES_PER_PAGE}장까지입니다. 추가 사진은 Imgur/Catbox 등 링크를 붙여 주세요.`,
+    )
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    const url = await fileToDataUrl(file)
+    const store = loadStore()
+    const localBand = store[slug]?.bands.find((b) => b.id === bandId)
+    if (!localBand) throw new Error('밴드 없음')
+    if (kind === 'cover') localBand.cover_url = url
+    else localBand.face_url = url
+    saveStore(store)
+    return url
+  }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const path = `${pageId}/${kind}s/${bandId}-${Date.now()}.${ext}`
+
+  const { error } = await supabase.storage.from('band-images').upload(path, file, {
+    upsert: true,
+    contentType: file.type || 'image/jpeg',
+  })
+  if (error) throw error
+
+  const column = kind === 'cover' ? 'cover_path' : 'face_path'
+  const { error: updateError } = await supabase
+    .from('bands')
+    .update({ [column]: path })
+    .eq('id', bandId)
+  if (updateError) throw updateError
+
+  return publicUrl(path)!
+}
+
+export async function clearBandImage(
+  slug: string,
+  bandId: string,
+  kind: 'cover' | 'face',
+): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) {
+    const store = loadStore()
+    const band = store[slug]?.bands.find((b) => b.id === bandId)
+    if (!band) return
+    if (kind === 'cover') band.cover_url = null
+    else band.face_url = null
+    saveStore(store)
+    return
+  }
+
+  const column = kind === 'cover' ? 'cover_path' : 'face_path'
+  const { error } = await supabase.from('bands').update({ [column]: null }).eq('id', bandId)
+  if (error) throw error
 }

@@ -7,11 +7,12 @@ https://band-archive-two.vercel.app
 - 주소 예: myname
 - PIN 예: 나만아는비번
 
-3) 밴드명 / 낯 / 사진 URL 넣고 저장
-   (사진은 Imgur·Catbox·Discord 등에 올린 뒤 링크 붙여넣기)
+3) 밴드명 / 낯 / 사진
+   - 허브 업로드: 페이지당 20장, 장당 1MB
+   - 넘치면 Imgur·Catbox·Discord 링크 붙여넣기
 
 4) 남에게 이 링크만 주기
 https://band-archive-two.vercel.app/p/myname
 
 편집은 /p/myname/edit + PIN
-(GitHub 사본·개인 Supabase·사진 호스팅 부담 없음 — 사진은 각자 링크)
+(GitHub 사본·개인 Supabase 필요 없음)

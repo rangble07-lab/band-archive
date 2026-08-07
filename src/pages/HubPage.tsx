@@ -57,7 +57,8 @@ export default function HubPage() {
       <section className="edit-card">
         <h2 className="section-title">내 페이지 만들기</h2>
         <p className="muted">
-          사진은 Imgur / Catbox / Discord 등에 올린 뒤 <strong>링크만</strong> 붙여넣으면 됩니다.
+          사진은 허브에 업로드(페이지당 {20}장 · 장당 1MB)하거나, Imgur/Catbox 등{' '}
+          <strong>링크</strong>를 붙여넣을 수 있습니다.
         </p>
         <form className="pin-form" onSubmit={onCreate}>
           <label>
