@@ -148,14 +148,6 @@ export default function EditPage() {
         }
       />
 
-      <ContactsEditor
-        contacts={data.contacts}
-        busy={busy}
-        onSave={(contacts) =>
-          withBusy(() => saveContacts(slug, data.pageId, contacts), '연락처 저장됨')
-        }
-      />
-
       <BandSection
         title="더 캐스트 기반"
         category="the_cast"
@@ -167,13 +159,21 @@ export default function EditPage() {
       />
 
       <BandSection
-        title="솔라 씨 기반"
+        title="SOLAR - C 기반"
         category="solar_c"
         slug={slug}
         pageId={data.pageId}
         bands={data.bands.filter((b) => b.category === 'solar_c')}
         busy={busy}
         onChange={withBusy}
+      />
+
+      <ContactsEditor
+        contacts={data.contacts}
+        busy={busy}
+        onSave={(contacts) =>
+          withBusy(() => saveContacts(slug, data.pageId, contacts), '연락처 저장됨')
+        }
       />
     </main>
   )
@@ -199,11 +199,16 @@ function ProfileEditor({
         <input
           value={form.display_name}
           onChange={(e) => setForm({ ...form, display_name: e.target.value })}
+          placeholder="이름"
         />
       </label>
       <label>
-        핸들
-        <input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} />
+        계정
+        <input
+          value={form.handle}
+          onChange={(e) => setForm({ ...form, handle: e.target.value })}
+          placeholder="@account"
+        />
       </label>
       <label>
         소개
@@ -211,22 +216,25 @@ function ProfileEditor({
           rows={2}
           value={form.tagline}
           onChange={(e) => setForm({ ...form, tagline: e.target.value })}
+          placeholder="(* 예시 : 밴드 역계 백업용 페이지입니다.)"
         />
       </label>
       <label>
-        추가 문구
+        추가문구
         <textarea
           rows={2}
           value={form.extra_note}
           onChange={(e) => setForm({ ...form, extra_note: e.target.value })}
+          placeholder="추가문구"
         />
       </label>
       <label>
-        처음이라면 (공지)
+        처음이라면 (*공지 문구입니다.)
         <textarea
           rows={3}
           value={form.notice}
           onChange={(e) => setForm({ ...form, notice: e.target.value })}
+          placeholder="(* 공지 문구입니다.)"
         />
       </label>
       <button type="button" className="btn primary" disabled={busy} onClick={() => onSave(form)}>
@@ -345,7 +353,7 @@ function BandEditor({
       if (!isSupabaseConfigured) {
         await upsertBand(slug, pageId, next)
       }
-    }, `${kind === 'cover' ? '커버' : '낯'} 사진 업로드됨`)
+    }, `${kind === 'cover' ? '밴드 커버' : '낯'} 사진 업로드됨`)
   }
 
   return (
@@ -355,6 +363,7 @@ function BandEditor({
         <input
           value={form.band_name}
           onChange={(e) => setForm({ ...form, band_name: e.target.value })}
+          placeholder="밴드명"
         />
       </label>
       <label>
@@ -362,16 +371,13 @@ function BandEditor({
         <input
           value={form.face_name}
           onChange={(e) => setForm({ ...form, face_name: e.target.value })}
+          placeholder="낯"
         />
-      </label>
-      <label>
-        @
-        <input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} />
       </label>
 
       <div className="photo-edit-row">
         <ImageField
-          label="커버"
+          label="밴드 커버"
           url={form.cover_url}
           disabled={busy}
           onPick={(f) => onFile('cover', f)}
@@ -381,7 +387,7 @@ function BandEditor({
               const next = { ...form, cover_url: null }
               setForm(next)
               if (!isSupabaseConfigured) await upsertBand(slug, pageId, next)
-            }, '커버 삭제됨')
+            }, '밴드 커버 삭제됨')
           }
         />
         <ImageField

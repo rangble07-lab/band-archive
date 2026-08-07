@@ -56,27 +56,39 @@ export default function PublicPage() {
   const { profile, contacts, bands } = data
   const theCast = bands.filter((b) => b.category === 'the_cast')
   const solar = bands.filter((b) => b.category === 'solar_c')
-  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/p/${data.slug}` : `/p/${data.slug}`
+  const shareUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/p/${data.slug}` : `/p/${data.slug}`
 
   return (
     <main className="page">
       <header className="hero">
         <p className="eyebrow">◈</p>
         <h1>BAND</h1>
-        <p className="identity">
-          {profile.display_name} ({profile.handle}) 연공계
-        </p>
-        <p className="tagline">{profile.tagline}</p>
-        {profile.extra_note ? <p className="extra">{profile.extra_note}</p> : null}
       </header>
+
+      <section className="profile-block">
+        <SectionTitle>프로필</SectionTitle>
+        <p>
+          <span className="label">이름</span> {profile.display_name || '—'}
+        </p>
+        <p>
+          <span className="label">계정</span> {profile.handle || '—'}
+        </p>
+        <p>
+          <span className="label">소개</span> {profile.tagline || '—'}
+        </p>
+        {profile.extra_note ? (
+          <p>
+            <span className="label">추가문구</span> {profile.extra_note}
+          </p>
+        ) : null}
+      </section>
 
       <hr className="rule" />
 
       <NoticeToggle notice={profile.notice} />
 
       <hr className="rule" />
-
-      <SectionTitle>밴드 목록</SectionTitle>
 
       <section className="block">
         <h3 className="subhead">더 캐스트 기반</h3>
@@ -88,7 +100,6 @@ export default function PublicPage() {
               key={b.id}
               bandName={b.band_name}
               faceName={b.face_name}
-              handle={b.handle}
               coverUrl={b.cover_url}
               faceUrl={b.face_url}
             />
@@ -97,7 +108,7 @@ export default function PublicPage() {
       </section>
 
       <section className="block">
-        <h3 className="subhead">솔라 씨 기반</h3>
+        <h3 className="subhead">SOLAR - C 기반</h3>
         {solar.length === 0 ? (
           <p className="muted">아직 없음</p>
         ) : (
@@ -106,7 +117,6 @@ export default function PublicPage() {
               key={b.id}
               bandName={b.band_name}
               faceName={b.face_name}
-              handle={b.handle}
               coverUrl={b.cover_url}
               faceUrl={b.face_url}
             />

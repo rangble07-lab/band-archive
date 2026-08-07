@@ -25,13 +25,11 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 export function BandCard({
   bandName,
   faceName,
-  handle,
   coverUrl,
   faceUrl,
 }: {
   bandName: string
   faceName: string
-  handle: string
   coverUrl: string | null
   faceUrl: string | null
 }) {
@@ -44,18 +42,15 @@ export function BandCard({
         <p>
           <span className="label">낯</span> {faceName || '________'}
         </p>
-        <p>
-          <span className="label">@</span> {handle || '_____'}
-        </p>
       </div>
       <div className="photo-row">
         <figure className="photo-slot">
           {coverUrl ? (
             <img src={coverUrl} alt={`${bandName || 'band'} cover`} />
           ) : (
-            <div className="photo-empty">커버</div>
+            <div className="photo-empty">밴드 커버</div>
           )}
-          <figcaption>커버</figcaption>
+          <figcaption>밴드 커버</figcaption>
         </figure>
         <figure className="photo-slot">
           {faceUrl ? (

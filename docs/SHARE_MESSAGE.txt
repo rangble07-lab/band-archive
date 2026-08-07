@@ -1,7 +1,7 @@
 BAND Hub (간편 버전)
 
 1) 이 주소 접속
-https://여기-배포주소.vercel.app
+https://band-archive-two.vercel.app
 
 2) 「내 페이지 만들기」
 - 주소 예: myname
@@ -10,7 +10,7 @@ https://여기-배포주소.vercel.app
 3) 밴드명 / 낯 / 사진 넣고 저장
 
 4) 남에게 이 링크만 주기
-https://여기-배포주소.vercel.app/p/myname
+https://band-archive-two.vercel.app/p/myname
 
 편집은 /p/myname/edit + PIN
-(GitHub 사본·Supabase 개인 계정 필요 없음)
+(GitHub 사본·개인 Supabase 필요 없음)

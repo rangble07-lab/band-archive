@@ -46,6 +46,10 @@ a {
   padding-top: 8px;
 }
 
+.profile-block p {
+  margin: 0 0 8px;
+}
+
 .eyebrow {
   margin: 0;
   color: var(--accent);

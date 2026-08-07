@@ -34,11 +34,11 @@ export interface ArchiveData {
 }
 
 export const EMPTY_PROFILE: Profile = {
-  display_name: 'ㅇㅇ',
-  handle: '@account',
-  tagline: '밴드 역계 백업용 페이지입니다.',
-  extra_note: '(* 추가 할 말이 있으면 써 주세요.)',
-  notice: '(* 본인에 관한 추가 공지를 써 주세요.)',
+  display_name: '',
+  handle: '',
+  tagline: '',
+  extra_note: '',
+  notice: '',
 }
 
 export const EMPTY_CONTACTS: Contacts = {
