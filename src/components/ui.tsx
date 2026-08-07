@@ -1,8 +1,10 @@
 import { useState, type ReactNode } from 'react'
+import { isNoticeEmpty, sanitizeNoticeHtml } from '../lib/richtext'
 
 export function NoticeToggle({ notice }: { notice: string }) {
   const [open, setOpen] = useState(false)
-  if (!notice.trim()) return null
+  const html = sanitizeNoticeHtml(notice)
+  if (isNoticeEmpty(html)) return null
   return (
     <section className="block">
       <button
@@ -14,7 +16,9 @@ export function NoticeToggle({ notice }: { notice: string }) {
         <span className="toggle-chevron">{open ? '▾' : '▸'}</span>
         처음이라면
       </button>
-      {open ? <p className="notice-body">{notice}</p> : null}
+      {open ? (
+        <div className="notice-body" dangerouslySetInnerHTML={{ __html: html }} />
+      ) : null}
     </section>
   )
 }

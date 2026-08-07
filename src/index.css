@@ -79,6 +79,69 @@ a {
   margin: 0 0 6px;
   color: var(--muted);
   white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.notice-body b,
+.notice-body strong {
+  font-weight: 700;
+}
+
+.notice-body i,
+.notice-body em {
+  font-style: italic;
+}
+
+.notice-body u {
+  text-decoration: underline;
+}
+
+.notice-editor {
+  margin-top: 6px;
+}
+
+.format-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.format-btn {
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.format-btn:hover {
+  border-color: var(--accent);
+}
+
+.rich-input {
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  line-height: 1.55;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rich-input:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.rich-input:focus {
+  border-color: var(--accent);
 }
 
 .rule {

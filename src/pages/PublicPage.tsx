@@ -4,6 +4,7 @@ import { fetchArchive } from '../lib/api'
 import type { ArchiveData } from '../types'
 import { isBandFilled } from '../types'
 import { BandCard, NoticeToggle, SectionTitle } from '../components/ui'
+import { isNoticeEmpty } from '../lib/richtext'
 
 export default function PublicPage() {
   const { slug = '' } = useParams()
@@ -139,12 +140,12 @@ export default function PublicPage() {
         </section>
       ) : null}
 
-      {profile.notice.trim() ? (
+      {isNoticeEmpty(profile.notice) ? null : (
         <>
           <hr className="rule" />
           <NoticeToggle notice={profile.notice} />
         </>
-      ) : null}
+      )}
 
       {theCast.length > 0 ? (
         <>

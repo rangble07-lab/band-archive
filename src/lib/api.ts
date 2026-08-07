@@ -8,6 +8,7 @@ import {
   isValidSlug,
   normalizeSlug,
 } from '../types'
+import { sanitizeNoticeHtml } from './richtext'
 
 const LOCAL_KEY = 'band-hub-pages-v1'
 
@@ -94,7 +95,7 @@ function normalizeProfile(profile: Profile | (Omit<Profile, 'theme'> & { theme?:
     handle: profile.handle ?? '',
     tagline: profile.tagline ?? '',
     extra_note: profile.extra_note ?? '',
-    notice: profile.notice ?? '',
+    notice: sanitizeNoticeHtml(profile.notice ?? ''),
     theme: {
       accent: profile.theme?.accent || DEFAULT_THEME.accent,
       bg: profile.theme?.bg || DEFAULT_THEME.bg,

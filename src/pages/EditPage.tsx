@@ -17,6 +17,7 @@ import {
 } from '../lib/api'
 import type { ArchiveData, Band, BandCategory, Contacts, Profile } from '../types'
 import { SectionTitle } from '../components/ui'
+import { NoticeEditor } from '../components/NoticeEditor'
 
 export default function EditPage() {
   const { slug = '' } = useParams()
@@ -258,10 +259,9 @@ function ProfileEditor({
       </label>
       <label>
         처음이라면 (*공지 문구입니다.)
-        <textarea
-          rows={3}
+        <NoticeEditor
           value={form.notice}
-          onChange={(e) => setForm({ ...form, notice: e.target.value })}
+          onChange={(notice) => setForm({ ...form, notice })}
           placeholder="(* 공지 문구입니다.)"
         />
       </label>
