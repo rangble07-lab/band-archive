@@ -185,6 +185,11 @@ a {
   margin: 0 0 6px;
 }
 
+.contacts-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .footer {
   margin-top: 40px;
   display: flex;

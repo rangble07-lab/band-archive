@@ -26,29 +26,53 @@ function uid(): string {
   return crypto.randomUUID()
 }
 
+function emptyBand(category: BandCategory, sort_order: number): Band {
+  return {
+    id: uid(),
+    category,
+    band_name: '',
+    face_name: '',
+    handle: '',
+    cover_url: null,
+    face_url: null,
+    sort_order,
+  }
+}
+
 function emptyBands(): Band[] {
   return [
-    {
-      id: uid(),
-      category: 'the_cast',
-      band_name: '',
-      face_name: '',
-      handle: '',
-      cover_url: null,
-      face_url: null,
-      sort_order: 0,
-    },
-    {
-      id: uid(),
-      category: 'solar_c',
-      band_name: '',
-      face_name: '',
-      handle: '',
-      cover_url: null,
-      face_url: null,
-      sort_order: 0,
-    },
+    emptyBand('the_cast', 0),
+    emptyBand('solar_c', 0),
+    emptyBand('solar_c_1st', 0),
   ]
+}
+
+function contactsFromDb(row: { main?: string | null; sub?: string | null; other?: string | null } | null): Contacts {
+  if (!row) return { ...EMPTY_CONTACTS }
+  const main = (row.main ?? '').trim()
+  const sub = (row.sub ?? '').trim()
+  const other = (row.other ?? '').trim()
+  if (main || sub) {
+    return { text: [main, sub, other].filter(Boolean).join('\n') }
+  }
+  return { text: other }
+}
+
+function normalizeContacts(
+  contacts: Contacts | { text?: string; main?: string; sub?: string; other?: string },
+): Contacts {
+  if (contacts && typeof contacts === 'object' && 'text' in contacts && typeof contacts.text === 'string') {
+    return { text: contacts.text }
+  }
+  return contactsFromDb(contacts as { main?: string; sub?: string; other?: string })
+}
+
+function contactsToDb(contacts: Contacts) {
+  return {
+    main: '',
+    sub: '',
+    other: contacts.text ?? '',
+  }
 }
 
 function loadStore(): LocalStore {
@@ -220,11 +244,11 @@ export async function createPage(slugInput: string, pin: string): Promise<string
 
   const { error: contactsError } = await supabase.from('contacts').insert({
     page_id: pageId,
-    ...EMPTY_CONTACTS,
+    ...contactsToDb(EMPTY_CONTACTS),
   })
   if (contactsError) throw contactsError
 
-  const starter = emptyBands().map((b, i) => ({
+  const starter = emptyBands().map((b) => ({
     id: b.id,
     page_id: pageId,
     category: b.category,
@@ -233,7 +257,7 @@ export async function createPage(slugInput: string, pin: string): Promise<string
     handle: '',
     cover_path: null,
     face_path: null,
-    sort_order: i,
+    sort_order: b.sort_order,
   }))
   const { error: bandsError } = await supabase.from('bands').insert(starter)
   if (bandsError) throw bandsError
@@ -265,7 +289,7 @@ export async function fetchArchive(slugInput: string): Promise<ArchiveData> {
       pageId: page.pageId,
       slug,
       profile: normalizeProfile(page.profile),
-      contacts: page.contacts,
+      contacts: normalizeContacts(page.contacts),
       bands: page.bands,
     }
   }
@@ -289,13 +313,7 @@ export async function fetchArchive(slugInput: string): Promise<ArchiveData> {
     pageId: page.id,
     slug,
     profile: profileFromDb(page as Record<string, unknown>),
-    contacts: contactsRes.data
-      ? {
-          main: contactsRes.data.main ?? '',
-          sub: contactsRes.data.sub ?? '',
-          other: contactsRes.data.other ?? '',
-        }
-      : { ...EMPTY_CONTACTS },
+    contacts: contactsFromDb(contactsRes.data),
     bands: (bandsRes.data ?? []).map((row) => ({
       id: row.id,
       category: row.category as BandCategory,
@@ -343,7 +361,7 @@ export async function saveContacts(slug: string, pageId: string, contacts: Conta
 
   const { error } = await supabase.from('contacts').upsert({
     page_id: pageId,
-    ...contacts,
+    ...contactsToDb(contacts),
     updated_at: new Date().toISOString(),
   })
   if (error) throw error

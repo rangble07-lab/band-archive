@@ -23,14 +23,14 @@ create table if not exists public.contacts (
   page_id uuid primary key references public.pages(id) on delete cascade,
   main text not null default '',
   sub text not null default '',
-  other text not null default '',
+  other text not null default '', -- freeform "기타 연락처" body (app writes here)
   updated_at timestamptz default now()
 );
 
 create table if not exists public.bands (
   id uuid primary key default gen_random_uuid(),
   page_id uuid not null references public.pages(id) on delete cascade,
-  category text not null check (category in ('the_cast', 'solar_c')),
+  category text not null check (category in ('the_cast', 'solar_c', 'solar_c_1st')),
   band_name text not null default '',
   face_name text not null default '',
   handle text not null default '',

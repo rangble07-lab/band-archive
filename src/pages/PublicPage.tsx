@@ -57,7 +57,8 @@ export default function PublicPage() {
   const { profile, contacts, bands } = data
   const theCast = bands.filter((b) => b.category === 'the_cast' && isBandFilled(b))
   const solar = bands.filter((b) => b.category === 'solar_c' && isBandFilled(b))
-  const hasContacts = Boolean(contacts.main.trim() || contacts.sub.trim() || contacts.other.trim())
+  const solar1st = bands.filter((b) => b.category === 'solar_c_1st' && isBandFilled(b))
+  const hasContacts = Boolean(contacts.text.trim())
   const hasProfile = Boolean(
     profile.display_name.trim() ||
       profile.handle.trim() ||
@@ -152,14 +153,30 @@ export default function PublicPage() {
         </>
       ) : null}
 
+      {solar1st.length > 0 ? (
+        <>
+          <hr className="rule" />
+          <section className="block">
+            <h3 className="subhead">SOLAR - C 1차</h3>
+            {solar1st.map((b) => (
+              <BandCard
+                key={b.id}
+                bandName={b.band_name}
+                faceName={b.face_name}
+                coverUrl={b.cover_url}
+                faceUrl={b.face_url}
+              />
+            ))}
+          </section>
+        </>
+      ) : null}
+
       {hasContacts ? (
         <>
           <hr className="rule" />
           <SectionTitle>기타 연락처</SectionTitle>
           <section className="contacts">
-            {contacts.main.trim() ? <p>Main — {contacts.main}</p> : null}
-            {contacts.sub.trim() ? <p>Sub — {contacts.sub}</p> : null}
-            {contacts.other.trim() ? <p>기타 — {contacts.other}</p> : null}
+            <p className="contacts-body">{contacts.text}</p>
           </section>
         </>
       ) : null}

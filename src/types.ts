@@ -1,4 +1,4 @@
-export type BandCategory = 'the_cast' | 'solar_c'
+export type BandCategory = 'the_cast' | 'solar_c' | 'solar_c_1st'
 
 export interface Theme {
   accent: string
@@ -16,9 +16,7 @@ export interface Profile {
 }
 
 export interface Contacts {
-  main: string
-  sub: string
-  other: string
+  text: string
 }
 
 export interface Band {
@@ -56,9 +54,7 @@ export const EMPTY_PROFILE: Profile = {
 }
 
 export const EMPTY_CONTACTS: Contacts = {
-  main: '',
-  sub: '',
-  other: '',
+  text: '',
 }
 
 export function isBandFilled(band: Band): boolean {

@@ -177,6 +177,17 @@ export default function EditPage() {
         onChange={withBusy}
       />
 
+      <BandSection
+        title="SOLAR - C 1차"
+        category="solar_c_1st"
+        slug={slug}
+        pageId={data.pageId}
+        bands={data.bands.filter((b) => b.category === 'solar_c_1st')}
+        allBands={data.bands}
+        busy={busy}
+        onChange={withBusy}
+      />
+
       <ContactsEditor
         contacts={data.contacts}
         busy={busy}
@@ -305,16 +316,13 @@ function ContactsEditor({
     <section className="edit-card">
       <SectionTitle>기타 연락처</SectionTitle>
       <label>
-        Main
-        <input value={form.main} onChange={(e) => setForm({ ...form, main: e.target.value })} />
-      </label>
-      <label>
-        Sub
-        <input value={form.sub} onChange={(e) => setForm({ ...form, sub: e.target.value })} />
-      </label>
-      <label>
-        기타
-        <input value={form.other} onChange={(e) => setForm({ ...form, other: e.target.value })} />
+        기타 연락처
+        <textarea
+          rows={4}
+          value={form.text}
+          onChange={(e) => setForm({ text: e.target.value })}
+          placeholder="자유롭게 적어 주세요."
+        />
       </label>
       <button type="button" className="btn primary btn-long" disabled={busy} onClick={() => onSave(form)}>
         연락처 저장
