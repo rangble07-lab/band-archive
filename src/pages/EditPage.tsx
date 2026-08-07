@@ -188,10 +188,10 @@ export default function EditPage() {
       />
 
       <section className="edit-card create-page-tab">
-        <h2 className="section-title">페이지 생성</h2>
-        <p className="muted">새 아카이브 페이지를 만들려면 허브로 이동하세요.</p>
-        <Link to="/" className="btn primary btn-long">
-          새 페이지 만들기
+        <h2 className="section-title">페이지 만들기</h2>
+        <p className="muted">저장한 내용이 공개 페이지로 보이는지 확인해 보세요.</p>
+        <Link to={`/p/${slug}`} className="btn primary btn-long">
+          페이지 만들기
         </Link>
       </section>
     </main>
