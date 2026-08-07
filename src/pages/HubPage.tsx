@@ -82,7 +82,7 @@ export default function HubPage() {
             />
           </label>
           {error ? <p className="error">{error}</p> : null}
-          <button type="submit" className="btn primary" disabled={busy}>
+          <button type="submit" className="btn primary btn-long" disabled={busy}>
             만들고 편집하기
           </button>
         </form>
@@ -100,7 +100,7 @@ export default function HubPage() {
               autoComplete="off"
             />
           </label>
-          <button type="submit" className="btn ghost">
+          <button type="submit" className="btn primary btn-long">
             페이지 보기
           </button>
         </form>

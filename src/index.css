@@ -371,3 +371,22 @@ code {
   opacity: 0.45;
   pointer-events: none;
 }
+
+.btn-long {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  min-height: 52px;
+  box-sizing: border-box;
+}
+
+.create-page-tab {
+  margin-top: 8px;
+  margin-bottom: 28px;
+}
+
+a.btn.primary {
+  color: #fff;
+}

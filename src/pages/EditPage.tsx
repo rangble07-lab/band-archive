@@ -12,7 +12,6 @@ import {
   isHubHostedImage,
   saveContacts,
   saveProfile,
-  storageModeLabel,
   uploadBandImage,
   upsertBand,
   verifyPagePin,
@@ -129,7 +128,6 @@ export default function EditPage() {
       <header className="edit-top">
         <div>
           <h1>편집 · {slug}</h1>
-          <p className="muted">저장: {storageModeLabel()}</p>
         </div>
         <div className="edit-actions">
           <Link to={`/p/${slug}`} className="btn ghost">
@@ -187,6 +185,14 @@ export default function EditPage() {
           withBusy(() => saveContacts(slug, data.pageId, contacts), '연락처 저장됨')
         }
       />
+
+      <section className="edit-card create-page-tab">
+        <h2 className="section-title">페이지 생성</h2>
+        <p className="muted">새 아카이브 페이지를 만들려면 허브로 이동하세요.</p>
+        <Link to="/" className="btn primary btn-long">
+          새 페이지 만들기
+        </Link>
+      </section>
     </main>
   )
 }
@@ -283,7 +289,7 @@ function ContactsEditor({
         기타
         <input value={form.other} onChange={(e) => setForm({ ...form, other: e.target.value })} />
       </label>
-      <button type="button" className="btn primary" disabled={busy} onClick={() => onSave(form)}>
+      <button type="button" className="btn primary btn-long" disabled={busy} onClick={() => onSave(form)}>
         연락처 저장
       </button>
     </section>
