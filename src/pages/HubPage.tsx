@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { createPage, storageModeLabel } from '../lib/api'
+import { useNavigate } from 'react-router-dom'
+import { createPage } from '../lib/api'
 import { unlockEdit } from '../lib/auth'
 import { normalizeSlug } from '../types'
 
@@ -45,28 +45,24 @@ export default function HubPage() {
         <p className="eyebrow">◈</p>
         <h1>BAND Hub</h1>
         <p className="tagline">
-          다녀온 메신저 밴드를 링크로 공유하는 허브입니다.
+          다녀온 밴드 아카이브 페이지 제작 허브입니다.
           <br />
-          각자 페이지를 만들고, 남에게는 공개 주소만 주면 됩니다.
+          각자 페이지를 만들고, 타인에게는 공개 주소만 주세요.
         </p>
-        <p className="muted">저장: {storageModeLabel()}</p>
       </header>
 
       <hr className="rule" />
 
       <section className="edit-card">
         <h2 className="section-title">내 페이지 만들기</h2>
-        <p className="muted">
-          사진은 허브에 업로드(페이지당 {20}장 · 장당 1MB)하거나, Imgur/Catbox 등{' '}
-          <strong>링크</strong>를 붙여넣을 수 있습니다.
-        </p>
+        <p className="muted">주소와 PIN 번호를 설정해 주세요.</p>
         <form className="pin-form" onSubmit={onCreate}>
           <label>
             페이지 주소
             <input
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              placeholder="예: cozy / myname"
+              placeholder="예: myname (* 해당 주소를 기억해 주세요.)"
               autoComplete="off"
             />
           </label>
@@ -93,32 +89,23 @@ export default function HubPage() {
       </section>
 
       <section className="edit-card">
-        <h2 className="section-title">이미 만든 페이지 열기</h2>
+        <h2 className="section-title">이미 만든 페이지 열고 편집하기</h2>
         <form className="pin-form" onSubmit={onOpen}>
           <label>
             페이지 주소
             <input
               value={openSlug}
               onChange={(e) => setOpenSlug(e.target.value)}
-              placeholder="예: cozy"
+              placeholder="예 : sunset"
               autoComplete="off"
             />
           </label>
           <button type="submit" className="btn ghost">
-            공개 페이지 보기
+            페이지 보기
           </button>
         </form>
-        <p className="muted">
-          편집은 공개 페이지 아래 <strong>편집</strong> 버튼 → PIN 입력
-        </p>
+        <p className="muted">편집은 페이지 아래 편집 버튼 → PIN 입력</p>
       </section>
-
-      <footer className="footer">
-        <span className="muted">템플릿 사본 없이, 이 사이트만 쓰면 됩니다.</span>
-        <Link to="/" className="text-link">
-          맨 위
-        </Link>
-      </footer>
     </main>
   )
 }
