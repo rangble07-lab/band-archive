@@ -616,7 +616,6 @@ function ImageSlot({
         <input
           type="file"
           accept="image/*"
-          capture="environment"
           disabled={uploadDisabled}
           hidden
           onChange={(e) => onPick(e.target.files?.[0] ?? null)}
