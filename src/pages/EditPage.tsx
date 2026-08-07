@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom'
 import { isEditUnlocked, lockEdit, unlockEdit } from '../lib/auth'
 import {
   MAX_HUB_IMAGES_PER_PAGE,
-  MAX_UPLOAD_BYTES,
   clearBandImage,
   countHubImages,
   createBand,
