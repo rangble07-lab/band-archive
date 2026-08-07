@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { fetchArchive, storageModeLabel } from '../lib/api'
+import { fetchArchive } from '../lib/api'
 import type { ArchiveData } from '../types'
 import { BandCard, NoticeToggle, SectionTitle } from '../components/ui'
 
@@ -134,14 +134,6 @@ export default function PublicPage() {
       </section>
 
       <footer className="footer">
-        <div>
-          <p className="muted" style={{ margin: 0 }}>
-            저장: {storageModeLabel()}
-          </p>
-          <p className="muted" style={{ margin: '4px 0 0' }}>
-            공유: {shareUrl}
-          </p>
-        </div>
         <div className="edit-actions">
           <Link to={`/p/${data.slug}/edit`} className="text-link">
             편집
