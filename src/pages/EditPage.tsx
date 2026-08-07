@@ -87,26 +87,27 @@ export default function EditPage() {
     return (
       <main className="page edit-page">
         <h1>편집 · {slug}</h1>
-        <p className="muted">이 페이지 주인만 PIN으로 들어올 수 있습니다.</p>
+        <div className="edit-actions" style={{ marginBottom: 16 }}>
+          <Link to={`/p/${slug}`} className="btn ghost">
+            페이지 보기
+          </Link>
+        </div>
         <form className="pin-form" onSubmit={onUnlock}>
-          <label htmlFor="pin">PIN</label>
+          <label htmlFor="pin">PIN 번호</label>
           <input
             id="pin"
             type="password"
             autoComplete="current-password"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
-            placeholder="PIN 입력"
+            placeholder="PIN 번호"
           />
           {pinError ? <p className="error">{pinError}</p> : null}
-          <button type="submit" className="btn primary" disabled={busy}>
+          <button type="submit" className="btn primary btn-long" disabled={busy}>
             잠금 해제
           </button>
         </form>
         <div className="edit-actions">
-          <Link to={`/p/${slug}`} className="text-link">
-            공개 페이지
-          </Link>
           <Link to="/" className="text-link">
             허브
           </Link>
@@ -131,7 +132,7 @@ export default function EditPage() {
         </div>
         <div className="edit-actions">
           <Link to={`/p/${slug}`} className="btn ghost">
-            미리보기
+            페이지 보기
           </Link>
           <button type="button" className="btn ghost" onClick={onLock}>
             잠금
