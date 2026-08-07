@@ -34,36 +34,35 @@ export function BandCard({
   coverUrl: string | null
   faceUrl: string | null
 }) {
-  const photos = [
-    coverUrl ? { src: coverUrl, alt: `${bandName || 'band'} cover` } : null,
-    faceUrl ? { src: faceUrl, alt: `${faceName || 'face'} photo` } : null,
-  ].filter(Boolean) as { src: string; alt: string }[]
+  const cover = Boolean(coverUrl || bandName.trim())
+  const face = Boolean(faceUrl || faceName.trim())
+  const count = (cover ? 1 : 0) + (face ? 1 : 0)
+  if (count === 0) return null
 
   return (
     <article className="band-card">
-      {(bandName || faceName) && (
-        <div className="band-meta">
-          {bandName ? (
-            <p>
-              <span className="label">밴드명</span> {bandName}
-            </p>
-          ) : null}
-          {faceName ? (
-            <p>
-              <span className="label">낯</span> {faceName}
-            </p>
-          ) : null}
-        </div>
-      )}
-      {photos.length > 0 ? (
-        <div className={`photo-row${photos.length === 1 ? ' photo-row-one' : ''}`}>
-          {photos.map((p) => (
-            <figure key={p.src} className="photo-slot">
-              <img src={p.src} alt={p.alt} />
-            </figure>
-          ))}
-        </div>
-      ) : null}
+      <div className={`photo-row${count === 1 ? ' photo-row-one' : ''}`}>
+        {cover ? (
+          <figure className="photo-slot">
+            {coverUrl ? (
+              <img src={coverUrl} alt={bandName.trim() || '밴드 커버'} />
+            ) : (
+              <div className="photo-empty" aria-hidden="true" />
+            )}
+            {bandName.trim() ? <figcaption>{bandName}</figcaption> : null}
+          </figure>
+        ) : null}
+        {face ? (
+          <figure className="photo-slot">
+            {faceUrl ? (
+              <img src={faceUrl} alt={faceName.trim() || '낯'} />
+            ) : (
+              <div className="photo-empty" aria-hidden="true" />
+            )}
+            {faceName.trim() ? <figcaption>{faceName}</figcaption> : null}
+          </figure>
+        ) : null}
+      </div>
     </article>
   )
 }
